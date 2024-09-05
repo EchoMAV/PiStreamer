@@ -11,7 +11,7 @@ from picamera2.outputs import FileOutput
 from libcamera import controls
 from picamera2.outputs import FfmpegOutput
 
-FIFO_PATH = "/tmp/camerad"
+FIFO_PATH = "/tmp/pistreamer"
 FIFO_CAM_PATH = "/tmp/imx477"
 DESTINATION_IP="192.168.1.59"
 DESTINATION_PORT="5600"
@@ -60,7 +60,7 @@ def main(destination_ip, distination_port, bitrate):
         os.mkfifo(FIFO_PATH)
 
     # Initialize Picamera2
-    tuning = Picamera2.load_tuning_file("/usr/local/echopilot/477-Pi4.json")
+    tuning = Picamera2.load_tuning_file("477-Pi4.json")
 
     picam2 = Picamera2(tuning=tuning)
 
