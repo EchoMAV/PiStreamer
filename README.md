@@ -16,5 +16,5 @@ zoom full IN: `echo "zoom 8.0" > /tmp/pistreamer`
 To stop the daemon `echo "kill" > /tmp/pistreamer`  
 
 To do  
-[ ] Ability to control bitrate
+[ ] Ability to control bitrate  
 [ ] Ability to control destination ip and port at runtime
