@@ -25,6 +25,7 @@ def main():
         '-c:v', 'libx264',  # Use H.264 encoder
         '-preset', 'ultrafast',  # Encoding speed preset (adjust based on your needs)
         '-tune', 'zerolatency',
+        '-vf', 'deshake',  # Apply deshake filter
         '-b:v', '2M',  # Bitrate (adjust based on your needs)
         '-f', 'rtp',  # Output format (adjust based on your needs)
         'rtp://192.168.1.85:5600'  # Replace with your destination URL
