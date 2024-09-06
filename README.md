@@ -27,6 +27,14 @@ To fork the process and run it in the background, you can use
 ```
 python3 pistreamer.py {IP Address} {Port} {Bitrate in kbps} --daemon
 ```
+### To kill the dameon
+```
+echo "kill" > /tmp/pistreamer
+```
+Alternatively you can find the daemon and kill it
+```
+ps -ax | grep pistreamer
+sudo kill -9 {PROCESS_ID_FOUND_ABOVE}  
 
 ## Camera configuration file
 
