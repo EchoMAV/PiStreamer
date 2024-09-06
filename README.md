@@ -35,6 +35,7 @@ Alternatively you can find the daemon and kill it
 ```
 ps -ax | grep pistreamer
 sudo kill -9 {PROCESS_ID_FOUND_ABOVE}  
+```
 
 ## Camera configuration file
 
