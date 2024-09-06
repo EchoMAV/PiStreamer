@@ -5,6 +5,7 @@ import subprocess
 import argparse
 import ipaddress
 import signal
+from pathlib import Path
 from picamera2 import Picamera2, Preview
 from picamera2.encoders import H264Encoder
 from picamera2.outputs import FileOutput
@@ -13,11 +14,12 @@ from picamera2.outputs import FfmpegOutput
 
 FIFO_PATH = "/tmp/pistreamer"
 FIFO_CAM_PATH = "/tmp/imx477"
-DESTINATION_IP="192.168.1.59"
-DESTINATION_PORT="5600"
-BITRATE=2000000
+FRAMERATE = 30
 pid = None
 original_size =[]
+ip = None
+port = None
+bit = None
 
 def validate_ip(ip):
     try:
@@ -53,15 +55,20 @@ def cleanup_and_exit(picam2):
     print("Daemon killed. Exiting...")
     os.kill(pid, signal.SIGTERM)  # Terminate the process
 
-def main(destination_ip, distination_port, bitrate):
-    global original_size 
+def main(destination_ip, destination_port, bitrate):
+    global original_size, ip, port, bit
+
+    ip = destination_ip
+    port = destination_port
+    bit = bitrate
     # Create the named pipe if it doesn't exist
     if not os.path.exists(FIFO_PATH):
         os.mkfifo(FIFO_PATH)
+    
+    # Load tuning file
+    tuning = Picamera2.load_tuning_file(Path("477-Pi4.json").resolve())
 
-    # Initialize Picamera2
-    tuning = Picamera2.load_tuning_file("477-Pi4.json")
-
+    # Initialize Picamera2    
     picam2 = Picamera2(tuning=tuning)
 
     scaledBitrate = int(bitrate) * 1000
@@ -71,13 +78,13 @@ def main(destination_ip, distination_port, bitrate):
     picam2.configure(picam2.create_video_configuration())
 
     # Set the video encoder with H264 and the specified bitrate
-    encoder = H264Encoder(bitrate=int(scaledBitrate), repeat=True, framerate=35)
+    encoder = H264Encoder(bitrate=int(scaledBitrate), repeat=True, framerate=int(FRAMERATE))
     #output = FileOutput(FIFO_CAM_PATH)
     print("Starting...")
     picam2.start()
     original_size = picam2.capture_metadata()['ScalerCrop'][2:]
     #picam2.start_encoder(encoder, output)
-    ffmpeg_command = f"-f rtp udp://{destination_ip}:{distination_port}"
+    ffmpeg_command = f"-f rtp udp://{destination_ip}:{destination_port}"
     picam2.start_recording(encoder, output=FfmpegOutput(ffmpeg_command))
     # Start the command listener loop
     print(f"Listening on {FIFO_PATH} for commands...")
@@ -96,6 +103,39 @@ def handle_command(command, picam2):
     elif command == "kill":
         print("Killing daemon...")
         cleanup_and_exit(picam2)
+    elif command.startswith("bitrate"):
+        try:
+            bitrate = int(command.split(" ")[1])
+             # Validate bitrate
+            if not validate_bitrate(bitrate):
+                print(f"Error: {bitrate} is not a valid bitrate. It must be between 500 and 10000 kbps.")                
+            else:
+                print(f"Setting new bitrate: {bitrate} kbps")
+                set_stream(picam2, ip, port, bitrate)
+        except (IndexError, ValueError):
+            print("Invalid bitrate command. Use 'bitrate <value>' where value is an int 500-10000 kbps.")
+    elif command.startswith("port"):
+        try:
+            newPort = int(command.split(" ")[1])
+             # Validate port
+            if not validate_port(newPort):
+                print(f"Error: {newPort} is not a valid port. It must be between 1 and 65535.")                
+            else:
+                print(f"Setting new port: {newPort}")
+                set_stream(picam2, ip, newPort, bit)
+        except (IndexError, ValueError):
+            print("Invalid port command. Use 'port <value>' where value is an int between 1 and 65535.")          
+    elif command.startswith("ip"):
+        try:
+            newIP = command.split(" ")[1]
+             # Validate ip
+            if not validate_ip(newIP):
+                print(f"Error: {newIP} is not a valid IP Address.")                
+            else:
+                print(f"Setting new IP: {newIP}")
+                set_stream(picam2, newIP, port, bit)
+        except (IndexError, ValueError):
+            print("Invalid ip command. Use 'ip <value>' where value is a valid ip address.")           
     elif command.startswith("zoom"):
         try:
             zoom_factor = float(command.split(" ")[1])
@@ -104,6 +144,18 @@ def handle_command(command, picam2):
             print("Invalid zoom command. Use 'zoom <factor>' where factor is a float.")
     else:
         print(f"Unknown command: {command}")
+
+def set_stream(picam2, ip, port, bitrate):    
+    picam2.stop_recording()
+    picam2.stop()
+    encoder = H264Encoder(bitrate=(int(bitrate) * 1000), repeat=True, framerate=int(FRAMERATE))
+    #output = FileOutput(FIFO_CAM_PATH)
+    print("Updating pipeline...")
+    picam2.start()
+    original_size = picam2.capture_metadata()['ScalerCrop'][2:]
+    #picam2.start_encoder(encoder, output)
+    ffmpeg_command = f"-f rtp udp://{ip}:{port}"
+    picam2.start_recording(encoder, output=FfmpegOutput(ffmpeg_command))
 
 def set_zoom(picam2, zoom_factor):
     global original_size 
@@ -136,6 +188,7 @@ if __name__ == "__main__":
     parser.add_argument("ip", help="Destination IP address")
     parser.add_argument("port", help="Destination port number")
     parser.add_argument("bitrate", help="Bitrate in kbps")
+    parser.add_argument("--daemon", action="store_true", help="Run script as a daemon in the background")
     args = parser.parse_args()
 
     # Validate IP address
@@ -153,11 +206,12 @@ if __name__ == "__main__":
         print(f"Error: {args.bitrate} is not a valid bitrate. It must be between 500 and 10000 kbps.")
         sys.exit(1)
 
-    pid = os.fork()
-    if pid > 0:
-        # Exit the parent process
-        print(f"Forked to background with PID {pid}")
-        sys.exit()
+    if args.daemon:
+        pid = os.fork()
+        if pid > 0:
+            # Exit the parent process
+            print(f"Forked to background with PID {pid}")
+            sys.exit()
 
     # Child process continues to run the main loop
     main(args.ip, args.port, args.bitrate)
