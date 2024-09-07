@@ -46,6 +46,9 @@ def validate_bitrate(bitrate):
     except ValueError:
         return False
     
+def is_json_file(file_name):   
+    return os.path.isfile(file_name) and file_name.lower().endswith('.json')
+    
 def cleanup_and_exit(picam2):
     """Stop recording and cleanup before exiting."""
     picam2.stop_recording()
@@ -55,7 +58,7 @@ def cleanup_and_exit(picam2):
     print("Daemon killed. Exiting...")
     os.kill(pid, signal.SIGTERM)  # Terminate the process
 
-def main(destination_ip, destination_port, bitrate):
+def main(destination_ip, destination_port, bitrate, config_file):
     global original_size, ip, port, bit
 
     ip = destination_ip
@@ -66,7 +69,7 @@ def main(destination_ip, destination_port, bitrate):
         os.mkfifo(FIFO_PATH)
     
     # Load tuning file
-    tuning = Picamera2.load_tuning_file(Path("477-Pi4.json").resolve())
+    tuning = Picamera2.load_tuning_file(Path(config_file).resolve())
 
     # Initialize Picamera2    
     picam2 = Picamera2(tuning=tuning)
@@ -188,6 +191,7 @@ if __name__ == "__main__":
     parser.add_argument("ip", help="Destination IP address")
     parser.add_argument("port", help="Destination port number")
     parser.add_argument("bitrate", help="Bitrate in kbps")
+    parser.add_argument("config_file", help="Camera configuration json file")
     parser.add_argument("--daemon", action="store_true", help="Run script as a daemon in the background")
     args = parser.parse_args()
 
@@ -206,6 +210,11 @@ if __name__ == "__main__":
         print(f"Error: {args.bitrate} is not a valid bitrate. It must be between 500 and 10000 kbps.")
         sys.exit(1)
 
+    # Validate config file
+    if not is_json_file(args.config_file):
+        print(f"Error: {args.config_file} is not a valid json file. Make sure the file exists.")
+        sys.exit(1)
+
     if args.daemon:
         pid = os.fork()
         if pid > 0:
@@ -214,5 +223,5 @@ if __name__ == "__main__":
             sys.exit()
 
     # Child process continues to run the main loop
-    main(args.ip, args.port, args.bitrate)
+    main(args.ip, args.port, args.bitrate, args.config_file)
     
