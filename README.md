@@ -2,6 +2,13 @@
 
 This is a Python appication using the picamera2 library to open a camera on an Rpi and stream it to an RTP UDP endpoint.  
 
+## Dependencies
+```
+sudo apt install -y python3-libcamera libcamera-apps
+sudo apt install -y python3-picamera2
+sudo apt install -y ffmpeg
+```
+
 ## Non-Daemon operation
 
 For normal (non-daemon) functionality run the script as below
