@@ -3,7 +3,13 @@
 This is a Python appication using the picamera2 library to open a camera on an Rpi and stream it to an RTP UDP endpoint.  
 
 ## Dependencies  
-Tested on RPi4 CM running Debian 12 (bookworm)
+Tested on RPi4 CM running Raspian:  
+Release date: July 4th 2024  
+System: 64-bit  
+Kernel version: 6.6  
+Debian version: 12 (bookworm)  
+
+Software dependencies:  
 ```
 sudo apt install -y python3-libcamera libcamera-apps
 sudo apt install -y python3-picamera2
