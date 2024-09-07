@@ -21,7 +21,7 @@ sudo apt install -y ffmpeg
 For normal (non-daemon) functionality run the script as below
 
 ```
-python3 pistreamer.py {IP Address} {Port} {Bitrate in kbps}
+python3 pistreamer.py {IP Address} {Port} {Bitrate in kbps} {tuning_json_file}
 ```
 Once the app is running you can send a variety of commands (from a different session) using a named fifo `/tmp/pistreamer`  
 
@@ -39,7 +39,7 @@ echo "port 5600" > /tmp/pistreamer #change endpoint port to 5600
 
 To fork the process and run it in the background, you can use
 ```
-python3 pistreamer.py {IP Address} {Port} {Bitrate in kbps} --daemon
+python3 pistreamer.py {IP Address} {Port} {Bitrate in kbps} {tuning_json_file} --daemon
 ```
 ### To kill the dameon
 ```
@@ -53,4 +53,4 @@ sudo kill -9 {PROCESS_ID_FOUND_ABOVE}
 
 ## Camera configuration file
 
-Currently the script is using the camera configuration file `477-Pi4.json`. 
+A camera tuning json file is expected. Starting points for these files for the IMX477 sensor: https://github.com/raspberrypi/libcamera/blob/main/src/ipa/rpi/vc4/data/imx477.json and https://www.arducam.com/wp-content/uploads/2023/12/Arducam-477M-Pi4.json
