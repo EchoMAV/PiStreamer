@@ -29,7 +29,7 @@ def main():
         '-vf', 'deshake',  # Apply deshake filter
         '-b:v', '2M',  # Bitrate (adjust based on your needs)
         '-f', 'rtp',  # Output format (adjust based on your needs)
-        'rtp://192.168.1.85:5600'  # Replace with your destination URL
+        'rtp://192.168.1.38:5600'  # Replace with your destination URL
     ]
     
     # Start ffmpeg process
@@ -40,6 +40,7 @@ def main():
         while True:
             # Capture frame from Picamera2
             frame = picam2.capture_array()
+            print()
             data8 = np.array(frame, dtype=np.uint8)
             # Send frame to ffmpeg process
             ffmpeg_process.stdin.write(data8.view(np.uint16))

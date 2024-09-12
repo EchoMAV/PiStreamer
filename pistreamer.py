@@ -79,8 +79,8 @@ def main(destination_ip, destination_port, bitrate, config_file):
     scaledBitrate = int(bitrate) * 1000
 
     # Set the camera configuration
-    #picam2.configure(picam2.create_video_configuration(main={"size": (1280, 720)}))
-    picam2.configure(picam2.create_video_configuration())
+    picam2.configure(picam2.create_video_configuration(main={"size": (1280, 720)}))
+    # picam2.configure(picam2.create_video_configuration())
 
     # Set the video encoder with H264 and the specified bitrate
     encoder = H264Encoder(bitrate=int(scaledBitrate), repeat=True, framerate=int(FRAMERATE))
@@ -96,6 +96,7 @@ def main(destination_ip, destination_port, bitrate, config_file):
     while True:
         with open(FIFO_PATH, 'r') as fifo:
             command = fifo.read().strip()
+            time.sleep(.2)
             if command:
                 print(f"Received command: {command}")
                 handle_command(command, picam2)
