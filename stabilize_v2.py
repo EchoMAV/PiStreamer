@@ -4,6 +4,7 @@ import numpy as np
 import time
 import subprocess
 import argparse
+from pathlib import Path
 
 # Argument parsing
 parser = argparse.ArgumentParser(description='Video stabilization script.')
@@ -14,12 +15,12 @@ parser.add_argument('--destination_port', type=int, default=5600, help='Destinat
 args = parser.parse_args()
 
 # Initialize the Picamera2 instance
-picam2 = Picamera2()
-
-resolution = tuple(map(int, args.resolution.split('x')))
+tuning = Picamera2.load_tuning_file(Path("./477-Pi4.json").resolve())
+picam2 = Picamera2(tuning=tuning)
 
 # Configure the camera to capture video frames
-config = picam2.create_preview_configuration(raw={"format": "SRGGB12", "size": resolution})
+resolution = tuple(map(int, args.resolution.split('x')))
+config = picam2.create_preview_configuration(main={"size": resolution})
 picam2.configure(config)
 
 # Start the camera
@@ -32,9 +33,7 @@ ffmpeg_command = [
     '-f', 'rawvideo',  # Input format
     '-pix_fmt', 'yuv420p',  # Pixel format
     '-s', f'{resolution[0]}x{resolution[1]}',  # Frame size
-    '-r', '30',  # Frame rate
     '-i', '-',  # Input from stdin
-    # '-vf', f'crop={resolution[0]-40}:{resolution[1]-40},pad={resolution[0]}:{resolution[1]}:20:20:pink',  # Crop and pad
     '-c:v', 'libx264',  # Video codec
     '-preset', 'ultrafast',  # Faster encoding
     '-tune', 'zerolatency',  # Tune for low latency
@@ -46,36 +45,28 @@ ffmpeg_command = [
 # Start the FFmpeg process
 ffmpeg_process = subprocess.Popen(ffmpeg_command, stdin=subprocess.PIPE)
 
-
-
+# Init frame
 fps = []
 init_frame = picam2.capture_array()
 if args.stabilize:
-    prev_frame = cv2.cvtColor(init_frame, cv2.COLOR_YUV2BGR_I420) 
-    prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
+    prev_gray = cv2.cvtColor(init_frame, cv2.COLOR_RGB2GRAY)
 
+# Main loop
 try:
     i = 0
     startt = time.perf_counter()
     while True:
         i += 1
-        # Capture a frame
         frame = picam2.capture_array()
 
         if frame is None or frame.size == 0:
             print("Empty frame captured, skipping...")
             continue
 
-        # Debayer the raw frame to convert it to BGR format
-        frame = frame[:, :, 0].reshape((480, 640)).astype(np.uint16)
-        # frame = frame.reshape((frame.shape[0]*3,frame.shape[1]*3))
-        frame = frame.astype(np.uint16)
-        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_BayerRG2BGR)
-
         if args.stabilize:
-            gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
+            gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
            
-            # Calculate optical flow using a faster algorithm
+            # Apply opencv stabilization algorithms 
             p0 = cv2.goodFeaturesToTrack(prev_gray, maxCorners=100, qualityLevel=0.3, minDistance=7, blockSize=7)
             if p0 is None:
                 print("No good features to track, skipping...")
@@ -98,26 +89,27 @@ try:
             transform = np.array([[1, 0, -dx], [0, 1, -dy]], dtype=np.float32)
 
             # Apply the transformation
-            # stabilized_frame = cv2.warpAffine(frame, transform, resolution)
             try:
-                stabilized_frame = cv2.warpAffine(frame_bgr, transform, resolution, borderMode=cv2.BORDER_REPLICATE)
+                # BORDER_REPLICATE prevents the distracting black edges from forming
+                stabilized_frame = cv2.warpAffine(frame, transform, resolution, borderMode=cv2.BORDER_REPLICATE)
             except cv2.error as e:
                 print(f"Error applying warpAffine: {e}")
-                stabilized_frame = frame_bgr
+                stabilized_frame = frame
 
             # Update the previous frame and gray image
             prev_gray = gray
         else:
-            stabilized_frame = frame_bgr
+            stabilized_frame = frame
 
 
         # Convert the frame back to YUV format before sending to FFmpeg
         stabilized_frame_8bit = cv2.convertScaleAbs(stabilized_frame)
-        stabilized_frame_yuv= cv2.cvtColor(stabilized_frame_8bit, cv2.COLOR_BGR2YUV_I420)
+        stabilized_frame_yuv= cv2.cvtColor(stabilized_frame_8bit, cv2.COLOR_RGB2YUV_I420)
+        
         # Forward the stabilized frame to rtp
         ffmpeg_process.stdin.write(stabilized_frame_yuv.tobytes())
         
-        # Calculate the elapsed time
+        # Calculate fps
         if i == 10:
             i = 0
             elapsed_time = time.perf_counter() - startt
@@ -129,7 +121,7 @@ try:
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 finally:
-    # Stop the camera
+    # Stop and cleanup
     picam2.stop()
     cv2.destroyAllWindows()
     print(f"\n\nAverage FPS = {sum(fps)/len(fps)}\n\n")
