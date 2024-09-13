@@ -19,6 +19,16 @@ class CommandController:
         elif command == PiCameraCommand.KILL.value:
             # TODO kill daemon
             self.pi_streamer.stop_and_clean()
+        elif command == PiCameraCommand.RECORD.value:
+            self.pi_streamer.start_recording()
+        elif command.startswith("zoom"):
+            try:
+                zoom_factor = float(command.split(" ")[1])
+                self.set_zoom(zoom_factor)
+            except (IndexError, ValueError):
+                print("Invalid zoom command. Use 'zoom <factor>' where factor is a float.")
+        elif command == PiCameraCommand.STOP_RECORDING.value:
+            self.pi_streamer.stop_recording()
         elif command.startswith(PiCameraCommand.BITRATE.value):
             try:
                 bitrate = int(command.split(" ")[1])
@@ -26,6 +36,7 @@ class CommandController:
                     print(f"Error: {bitrate} is not a valid bitrate. It must be between 500 and 10000 kbps.")                
                 else:
                     print(f"Setting new bitrate: {bitrate} kbps")
+                    bitrate = bitrate * 1000
                     self.reset_stream(("streaming_bitrate", bitrate))
             except (IndexError, ValueError):
                 print("Invalid bitrate command. Use 'bitrate <value>' where value is an int 500-10000 kbps.")
@@ -49,12 +60,6 @@ class CommandController:
                     self.reset_stream(("destination_ip", new_iP))
             except (IndexError, ValueError):
                 print("Invalid ip command. Use 'ip <value>' where value is a valid ip address.")           
-        elif command.startswith("zoom"):
-            try:
-                zoom_factor = float(command.split(" ")[1])
-                self.set_zoom(zoom_factor)
-            except (IndexError, ValueError):
-                print("Invalid zoom command. Use 'zoom <factor>' where factor is a float.")
         else:
             print(f"Unknown command: {command}")
 
@@ -81,14 +86,4 @@ class CommandController:
         offset = [(r - s) // 2 for r, s in zip(full_res, size)]
         self.pi_streamer.picam2.set_controls({"ScalerCrop": offset + size})
         print(f"Zoom set to {zoom_factor}x")
-
-    # Function to run a shell command
-    def run_command(self,command):
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        if result.returncode == 0:
-            print(f"Command succeeded: {command}")
-            print(result.stdout)
-        else:
-            print(f"Command failed: {command}")
-            print(result.stderr)
         

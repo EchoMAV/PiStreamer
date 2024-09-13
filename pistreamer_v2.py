@@ -11,15 +11,17 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 import sys
-from constants import DEFAULT_CONFIG_PATH, FIFO_PATH, FRAMERATE
+from constants import COMMANDS_FILE_PATH, DEFAULT_CONFIG_PATH, FRAMERATE, STABILIZATION_FRAMERATE
 from validator import Validator
-
+import select
 
 class PiStreamer2:
     def __init__(self, stabilize:bool, resolution:str, destination_ip:str, destination_port:int) -> None:
         self.picam2 = None
         self.stabilize = stabilize
         self.prev_gray = None
+        if self.stabilize:
+            resolution = STABILIZATION_FRAMERATE
         self.resolution = tuple(map(int, resolution.split('x')))
         self.command_controller = None # set later
         self.destination_ip = destination_ip
@@ -28,6 +30,11 @@ class PiStreamer2:
         self.ffmpeg_process_rtp = None
         self.streaming_bitrate = 1000000
         self.original_size = (0,0)
+        self.is_recording = False
+
+        # clear commands
+        with open(COMMANDS_FILE_PATH, 'w') as file:
+                pass
 
     def _init_ffmpeg_processes(self) -> None:
         """ 
@@ -76,8 +83,7 @@ class PiStreamer2:
             f'rtp://{self.destination_ip}:{self.destination_port}'
         ]
         
-        # Start the FFmpeg processes
-        self.ffmpeg_process_mp4 = subprocess.Popen(self.ffmpeg_command_mp4, stdin=subprocess.PIPE)
+        # Start the FFmpeg processes (mp4 only if we are recording)
         self.ffmpeg_process_rtp = subprocess.Popen(self.ffmpeg_command_rtp, stdin=subprocess.PIPE)
 
 
@@ -88,7 +94,8 @@ class PiStreamer2:
         """ 
         Circular reference setter.
         """
-        self.command_controller = command_controller
+        from command_controller import CommandController
+        self.command_controller:CommandController  = command_controller
 
     def _stabilize(self, frame:np.ndarray) -> np.ndarray:
         """ 
@@ -133,12 +140,40 @@ class PiStreamer2:
 
         return stabilized_frame
 
-    def _close_ffmpeg_processes(self) -> None:
+    def start_recording(self) -> None:
+        if self.is_recording:
+            print("Already recording...")
+            return
+        self.ffmpeg_process_mp4 = subprocess.Popen(self.ffmpeg_command_mp4, stdin=subprocess.PIPE)
+        self.is_recording = True
+
+    def stop_recording(self) -> None:
+        self.is_recording = False
         if self.ffmpeg_process_mp4:
+            print("Stopping recording...")
             if self.ffmpeg_process_mp4.stdin:
                 self.ffmpeg_process_mp4.stdin.close()
             self.ffmpeg_process_mp4.wait()
 
+    def _draw_rec(self, frame: np.ndarray) -> np.ndarray:
+        """ 
+        Paints "REC" on the top of the rtp stream (but not the mp4).
+        """
+        text = 'REC'
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = .75
+        color = (255, 0, 0)
+        thickness = 2
+        line_type = cv2.LINE_AA
+        # Get the text size to calculate the center position
+        text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
+        text_x = (frame.shape[1] - text_size[0]) // 2  # Centered along width
+        text_y = text_size[1] + 10  # Just below the top
+        cv2.putText(frame, text, (text_x, text_y), font, font_scale, color, thickness, line_type)
+        return frame
+
+    def _close_ffmpeg_processes(self) -> None:
+        self.stop_recording()
         if self.ffmpeg_process_rtp:
             if self.ffmpeg_process_rtp.stdin:
                 self.ffmpeg_process_rtp.stdin.close()
@@ -150,19 +185,27 @@ class PiStreamer2:
             self.picam2.stop()
         cv2.destroyAllWindows()
         self._close_ffmpeg_processes()
-        if os.path.exists(FIFO_PATH):
-            os.remove(FIFO_PATH)
+        if os.path.exists(COMMANDS_FILE_PATH):
+            os.remove(COMMANDS_FILE_PATH)
 
     def _read_and_process_commands(self) -> None:
-        with open(FIFO_PATH, 'r') as fifo:
-            command = fifo.read().strip()
-            if command:
+        if not os.path.exists(COMMANDS_FILE_PATH):
+            return
+
+        ran_command = False
+        with open(COMMANDS_FILE_PATH, 'r') as file:
+            commands = file.readlines()
+            if commands:
+                command = commands[0].strip()
                 print(f"Received command: {command}")
                 self.command_controller.handle_command(command)
+                ran_command = True
+
+        if ran_command:
+            with open(COMMANDS_FILE_PATH, 'w') as file:
+                pass
 
     def stream(self) -> None:
-        if not os.path.exists(FIFO_PATH):
-            os.mkfifo(FIFO_PATH)
         # Start the ffmpeg processes
         self._init_ffmpeg_processes()
         # Start the camera
@@ -186,17 +229,14 @@ class PiStreamer2:
             while True:
                 i += 1
                 # Calculate fps
-                if i == 10:
-                    i = 0
+                if i % 10 == 0:
                     elapsed_time = time.perf_counter() - startt
                     startt = time.perf_counter()
                     fps.append(10/elapsed_time)
                     print(f"fps={10/elapsed_time} | ")
-                    # with open(FIFO_PATH, 'r') as fifo:
-                    #     command = fifo.read().strip()
-                    #     if command:
-                    #         print(f"Received command: {command}")
-                    #         self.command_controller.handle_command(command)
+                    if i % 20 == 0:
+                        self._read_and_process_commands()
+                        i = 0
 
                 frame = self.picam2.capture_array()
 
@@ -209,11 +249,16 @@ class PiStreamer2:
 
                 # Convert the frame back to YUV format before sending to FFmpeg
                 frame_8bit = cv2.convertScaleAbs(frame)
-                frame_yuv= cv2.cvtColor(frame_8bit, cv2.COLOR_RGB2YUV_I420)
+                frame_yuv = cv2.cvtColor(frame_8bit, cv2.COLOR_RGB2YUV_I420)
                 
                 # Forward the stabilized frame to rtp
+                if self.is_recording:
+                    # mp4 should not have 'REC' appearing in the frame
+                    self.ffmpeg_process_mp4.stdin.write(frame_yuv.tobytes())
+                    frame_8bit_rec = self._draw_rec(frame_8bit)
+                    frame_yuv = cv2.cvtColor(frame_8bit_rec, cv2.COLOR_RGB2YUV_I420)
+
                 self.ffmpeg_process_rtp.stdin.write(frame_yuv.tobytes())
-                self.ffmpeg_process_mp4.stdin.write(frame_yuv.tobytes())
 
                 # Break the loop on 'q' key press
                 if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -226,10 +271,10 @@ if __name__ == "__main__":
     # Argument parsing
     parser = argparse.ArgumentParser(description='Video stabilization script.')
     parser.add_argument('--stabilize', action='store_true', help='Whether to stabilize')
-    parser.add_argument('--resolution', type=str, default='640x360', help='Resolution of the video frames (e.g., 640x360)')
+    parser.add_argument('--resolution', type=str, default='1280x720', help='Resolution of the video frames (e.g., 1280x720)')
     parser.add_argument('--destination_ip', type=str, default='192.168.1.124', help='Destination IP address for RTP stream')
     parser.add_argument('--destination_port', type=int, default=5600, help='Destination port for RTP stream')
-    parser.add_argument('--bitrate', type=int, default=1000000, help='Streaming bitrate')
+    parser.add_argument('--bitrate', type=int, default=1000000, help='Streaming bitrate in kbps')
     parser.add_argument('--config_file', type=str, default=DEFAULT_CONFIG_PATH, help='Relative file path for the IMX477 config json file')
     args = parser.parse_args()
     try:
