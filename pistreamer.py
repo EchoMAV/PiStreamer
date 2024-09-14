@@ -98,9 +98,10 @@ def main(destination_ip, destination_port, bitrate, config_file):
             command = fifo.read().strip()
             if command:
                 print(f"Received command: {command}")
-                handle_command(command, picam2, destination_ip, destination_port, bitrate)
+                handle_command(command, picam2)
 
-def handle_command(command, picam2, destination_ip, destination_port, bitrate):        
+def handle_command(command, picam2):        
+    global ip, port, bit
     if command == "stop":
         print("Stopping...")
         picam2.stop_recording()
@@ -115,8 +116,9 @@ def handle_command(command, picam2, destination_ip, destination_port, bitrate):
             if not validate_bitrate(newBitrate):
                 print(f"Error: {newBitrate} is not a valid bitrate. It must be between 500 and 10000 kbps.")                
             else:
-                print(f"Setting new bitrate: {newBitrate} kbps with IP: {destination_ip} and Port: {destination_port}")
-                set_stream(picam2, destination_ip, destination_port, newBitrate)
+                print(f"Setting new bitrate: {newBitrate} kbps with IP: {ip} and Port: {port}")
+                bit = newBitrate
+                set_stream(picam2, ip, port, newBitrate)
         except (IndexError, ValueError):
             print("Invalid bitrate command. Use 'bitrate <value>' where value is an int 500-10000 kbps.")
     elif command.startswith("port"):
@@ -126,8 +128,9 @@ def handle_command(command, picam2, destination_ip, destination_port, bitrate):
             if not validate_port(newPort):
                 print(f"Error: {newPort} is not a valid port. It must be between 1 and 65535.")                
             else:
-                print(f"Setting new port: {newPort} with ip: {ip} and bitrate: {bitrate}")
-                set_stream(picam2, destination_ip, newPort, bitrate)
+                print(f"Setting new port: {newPort} with ip: {ip} and bitrate: {bit}")
+                port = newPort
+                set_stream(picam2, ip, newPort, bit)
         except (IndexError, ValueError):
             print("Invalid port command. Use 'port <value>' where value is an int between 1 and 65535.")          
     elif command.startswith("ip"):
@@ -138,7 +141,8 @@ def handle_command(command, picam2, destination_ip, destination_port, bitrate):
                 print(f"Error: {newIP} is not a valid IP Address.")                
             else:
                 print(f"Setting new IP: {newIP}")
-                set_stream(picam2, newIP, destination_port, bitrate)
+                ip = newIP
+                set_stream(picam2, newIP, port, bit)
         except (IndexError, ValueError):
             print("Invalid ip command. Use 'ip <value>' where value is a valid ip address.")           
     elif command.startswith("zoom"):
