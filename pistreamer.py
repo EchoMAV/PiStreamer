@@ -101,6 +101,7 @@ def main(destination_ip, destination_port, bitrate, config_file):
                 handle_command(command, picam2)
 
 def handle_command(command, picam2):    
+    global ip, port, bit
     if command == "stop":
         print("Stopping...")
         picam2.stop_recording()
@@ -115,7 +116,7 @@ def handle_command(command, picam2):
             if not validate_bitrate(bitrate):
                 print(f"Error: {bitrate} is not a valid bitrate. It must be between 500 and 10000 kbps.")                
             else:
-                print(f"Setting new bitrate: {bitrate} kbps")
+                print(f"Setting new bitrate: {bitrate} kbps with IP: {ip} and Port: {port}")
                 set_stream(picam2, ip, port, bitrate)
         except (IndexError, ValueError):
             print("Invalid bitrate command. Use 'bitrate <value>' where value is an int 500-10000 kbps.")
@@ -126,7 +127,7 @@ def handle_command(command, picam2):
             if not validate_port(newPort):
                 print(f"Error: {newPort} is not a valid port. It must be between 1 and 65535.")                
             else:
-                print(f"Setting new port: {newPort}")
+                print(f"Setting new port: {newPort} with ip: {ip} and bitrate: {bit}")
                 set_stream(picam2, ip, newPort, bit)
         except (IndexError, ValueError):
             print("Invalid port command. Use 'port <value>' where value is an int between 1 and 65535.")          
