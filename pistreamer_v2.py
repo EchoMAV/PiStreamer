@@ -36,6 +36,8 @@ class PiStreamer2:
         destination_port: int,
         streaming_bitrate: int,
     ) -> None:
+        from command_controller import CommandController
+
         self.stabilize = stabilize
         self.prev_gray = None
         if self.stabilize:
@@ -44,7 +46,7 @@ class PiStreamer2:
                 f"Forcing resolution to {STABILIZATION_FRAMESIZE} for stabilization performance."
             )
         self.resolution = tuple(map(int, resolution.split("x")))
-        self.command_controller = None  # set later
+        self.command_controller: CommandController = None  # type: ignore # this is set later in _set_command_controller
         self.destination_ip = destination_ip
         self.destination_port = destination_port
         self.ffmpeg_process_mp4 = None
@@ -139,7 +141,7 @@ class PiStreamer2:
         ]
 
         # Start the FFmpeg processes (mp4 only if we are recording)
-        self.ffmpeg_process_rtp = subprocess.Popen(
+        self.ffmpeg_process_rtp = subprocess.Popen(  # type: ignore
             self.ffmpeg_command_rtp, stdin=subprocess.PIPE
         )
 
@@ -150,9 +152,7 @@ class PiStreamer2:
         """
         Circular reference setter.
         """
-        from command_controller import CommandController
-
-        self.command_controller: CommandController = command_controller
+        self.command_controller = command_controller
 
     def _stabilize(self, frame: np.ndarray) -> np.ndarray:
         """
@@ -205,8 +205,8 @@ class PiStreamer2:
         if self.is_recording:
             print("Already recording...")
             return
-        self.recording_start_time = time.time()
-        self.ffmpeg_process_mp4 = subprocess.Popen(
+        self.recording_start_time = int(time.time())
+        self.ffmpeg_process_mp4 = subprocess.Popen(  # type: ignore
             self.ffmpeg_command_mp4, stdin=subprocess.PIPE
         )
         self.is_recording = True
@@ -275,16 +275,16 @@ class PiStreamer2:
 
     def _read_and_process_commands(self) -> None:
         command = get_pending_command()
-        if command:
+        if command and self.command_controller:
             try:
                 self.command_controller.handle_command(command)
                 update_command_status(
-                    command_id=command.id, new_status=CommandStatus.COMPLETED.value
+                    command_id=str(command.id), new_status=CommandStatus.COMPLETED
                 )
             except Exception as e:
                 msg = f"Error processing command: {e}"
                 print(msg)
-                update_command_status_failure(command_id=command.id, meta_data=msg)
+                update_command_status_failure(command_id=str(command.id), meta_data=msg)
 
     def stream(self) -> None:
         # Start the ffmpeg processes
@@ -333,11 +333,11 @@ class PiStreamer2:
                 # Forward the stabilized frame to rtp
                 if self.is_recording:
                     # mp4 should not have 'REC' appearing in the frame
-                    self.ffmpeg_process_mp4.stdin.write(frame_yuv.tobytes())
+                    self.ffmpeg_process_mp4.stdin.write(frame_yuv.tobytes())  # type: ignore
                     frame_8bit_rec = self._draw_rec(frame_8bit)
                     frame_yuv = cv2.cvtColor(frame_8bit_rec, cv2.COLOR_RGB2YUV_I420)
 
-                self.ffmpeg_process_rtp.stdin.write(frame_yuv.tobytes())
+                self.ffmpeg_process_rtp.stdin.write(frame_yuv.tobytes())  # type: ignore
 
                 # Break the loop on 'q' key press
                 if cv2.waitKey(1) & 0xFF == ord("q"):
