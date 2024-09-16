@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
+
 from typing import Optional
 import uuid
-from peewee import SqliteDatabase, Model, CharField, DateTimeField, UUIDField
+from peewee import SqliteDatabase, Model, CharField, DateTimeField, UUIDField, TextField
 from datetime import datetime
-from constants import CommandStatus, PiCameraCommand
+from constants import CommandStatus, CommandType
 
 db = SqliteDatabase('library.db')
 
@@ -15,9 +17,10 @@ class CommandModel(Model):
     id = UUIDField(primary_key=True, default=uuid.uuid4)
     created_at = DateTimeField(default=datetime.now)
     updated_at = DateTimeField(default=datetime.now)
-    command_type = CharField(index=True,choices=[(status.value, status.name) for status in PiCameraCommand])
+    command_type = CharField(index=True,choices=[(status.value, status.name) for status in CommandType])
     command_value = CharField(null=True)
     command_status = CharField(index=True,choices=[(status.value, status.name) for status in CommandStatus])
+    meta_data = TextField(null=True)
 
     class Meta:
         database = db
@@ -30,15 +33,16 @@ def initialize_db():
     db.create_tables([CommandModel])
     db.close()
 
-def add_command(command_value:PiCameraCommand, command_status:CommandStatus) -> None:
+def add_command(command_type:CommandType, command_value:Optional[str]=None) -> None:
     with db.atomic():
         CommandModel.create(
             created_at=datetime.now(),
+            command_type=command_type,
             command_value=command_value,
-            command_status=command_status
+            command_status=CommandStatus.PENDING.value
         )
 
-def get_pending_commands() -> Optional[CommandModel]:
+def get_pending_command() -> Optional[CommandModel]:
     """ 
     Returns the oldest command that has not been executed yet (i.e. pending).
     If no such commands exist, then None is returned.
@@ -49,4 +53,9 @@ def get_pending_commands() -> Optional[CommandModel]:
 def update_command_status(command_id:str, new_status:CommandStatus) -> None:
     with db.atomic():
         query = CommandModel.update(command_status=new_status).where(CommandModel.id == command_id)
+        query.execute()
+
+def update_command_status_failure(command_id:str, meta_data:Optional[str]=None) -> None:
+    with db.atomic():
+        query = CommandModel.update(command_status=CommandStatus.FAILED.value, meta_data=meta_data).where(CommandModel.id == command_id)
         query.execute()

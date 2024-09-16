@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os
 from typing import Any
 from picamera2 import Picamera2
 import cv2
@@ -11,17 +10,17 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 import sys
-from constants import COMMANDS_FILE_PATH, DEFAULT_CONFIG_PATH, FRAMERATE, STABILIZATION_FRAMERATE
+from command_model import get_pending_command, initialize_db, update_command_status_failure, update_command_status
+from constants import DEFAULT_CONFIG_PATH, FRAMERATE, STABILIZATION_FRAMESIZE, STREAMING_FRAMESIZE, CommandStatus, STILL_FRAMESIZE
 from validator import Validator
-import select
 
 class PiStreamer2:
     def __init__(self, stabilize:bool, resolution:str, destination_ip:str, destination_port:int) -> None:
-        self.picam2 = None
         self.stabilize = stabilize
         self.prev_gray = None
         if self.stabilize:
-            resolution = STABILIZATION_FRAMERATE
+            resolution = STABILIZATION_FRAMESIZE
+            print(f"Forcing resolution to {STABILIZATION_FRAMESIZE} for stabilization performance.")
         self.resolution = tuple(map(int, resolution.split('x')))
         self.command_controller = None # set later
         self.destination_ip = destination_ip
@@ -31,10 +30,15 @@ class PiStreamer2:
         self.streaming_bitrate = 1000000
         self.original_size = (0,0)
         self.is_recording = False
+        tuning = Picamera2.load_tuning_file(Path("./477-Pi4.json").resolve())
+        self.picam2 = Picamera2(tuning=tuning)
+        self.streaming_config = self.picam2.create_preview_configuration(main={"size": self.resolution})
+        self.photo_config = self.picam2.create_preview_configuration(main={"size": tuple(map(int, STILL_FRAMESIZE.split('x')))})
 
-        # clear commands
-        with open(COMMANDS_FILE_PATH, 'w') as file:
-                pass
+
+    def _get_timestamp(self) -> str:
+        return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
 
     def _init_ffmpeg_processes(self) -> None:
         """ 
@@ -43,7 +47,6 @@ class PiStreamer2:
         self._close_ffmpeg_processes()
        
         # Used for saving data to disk
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         self.ffmpeg_command_mp4 = [
             'ffmpeg',
             '-y',  # Overwrite output files without asking
@@ -60,7 +63,7 @@ class PiStreamer2:
             '-b:v', '1M',  # Video bitrate
             '-movflags', '+faststart',  # Prepare the file for playback
             '-f', 'mp4',  # Output format for MP4
-            f'{timestamp}.mp4',  # Output file
+            f'{self._get_timestamp()}.mp4',  # Output file
             ]
 
         # Used for streaming video to GCS
@@ -88,7 +91,7 @@ class PiStreamer2:
 
 
     def __del__(self):
-        self.stop_and_clean()
+        self.stop_and_clean_all()
 
     def _set_command_controller(self, command_controller: Any) -> None:
         """ 
@@ -155,6 +158,19 @@ class PiStreamer2:
                 self.ffmpeg_process_mp4.stdin.close()
             self.ffmpeg_process_mp4.wait()
 
+    def take_photo(self) -> None:
+        """ 
+        Since photos are taken at higher resolution than streaming, the picam2 must stop and
+        be reconfigured before the photo can be taken. Once taken, the streaming config is reapplied.
+        """
+        self.picam2.stop()
+        self.picam2.configure(self.photo_config)
+        self.picam2.start()
+        self.picam2.capture_file(f"{self._get_timestamp()}.jpg")
+        self.picam2.stop()
+        self.picam2.configure(self.streaming_config)
+        self.picam2.start()
+
     def _draw_rec(self, frame: np.ndarray) -> np.ndarray:
         """ 
         Paints "REC" on the top of the rtp stream (but not the mp4).
@@ -179,40 +195,29 @@ class PiStreamer2:
                 self.ffmpeg_process_rtp.stdin.close()
             self.ffmpeg_process_rtp.wait()
 
-    def stop_and_clean(self) -> None:
+    def stop_and_clean_all(self) -> None:
         print("Stopping and cleaning camera resources...")
         if self.picam2:
             self.picam2.stop()
         cv2.destroyAllWindows()
         self._close_ffmpeg_processes()
-        if os.path.exists(COMMANDS_FILE_PATH):
-            os.remove(COMMANDS_FILE_PATH)
 
     def _read_and_process_commands(self) -> None:
-        if not os.path.exists(COMMANDS_FILE_PATH):
-            return
-
-        ran_command = False
-        with open(COMMANDS_FILE_PATH, 'r') as file:
-            commands = file.readlines()
-            if commands:
-                command = commands[0].strip()
-                print(f"Received command: {command}")
+        command = get_pending_command()
+        if command:
+            try:
                 self.command_controller.handle_command(command)
-                ran_command = True
-
-        if ran_command:
-            with open(COMMANDS_FILE_PATH, 'w') as file:
-                pass
+                update_command_status(command_id=command.id, new_status=CommandStatus.COMPLETED.value)
+            except Exception as e:
+                msg = f"Error processing command: {e}"
+                print(msg)
+                update_command_status_failure(command_id=command.id, meta_data=msg)
 
     def stream(self) -> None:
         # Start the ffmpeg processes
         self._init_ffmpeg_processes()
         # Start the camera
-        tuning = Picamera2.load_tuning_file(Path("./477-Pi4.json").resolve())
-        self.picam2 = Picamera2(tuning=tuning)
-        config = self.picam2.create_preview_configuration(main={"size": self.resolution})
-        self.picam2.configure(config)
+        self.picam2.configure(self.streaming_config)
         self.picam2.start()
         self.original_size = self.picam2.capture_metadata()['ScalerCrop'][2:]
 
@@ -234,9 +239,9 @@ class PiStreamer2:
                     startt = time.perf_counter()
                     fps.append(10/elapsed_time)
                     print(f"fps={10/elapsed_time} | ")
-                    if i % 20 == 0:
-                        self._read_and_process_commands()
-                        i = 0
+
+                if i % 2 == 0:
+                    self._read_and_process_commands()
 
                 frame = self.picam2.capture_array()
 
@@ -264,14 +269,15 @@ class PiStreamer2:
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
         finally:
-            self.stop_and_clean()
+            self.stop_and_clean_all()
             print(f"\n\nAverage FPS = {sum(fps)/len(fps)}\n\n")
 
 if __name__ == "__main__":
     # Argument parsing
+    initialize_db()
     parser = argparse.ArgumentParser(description='Video stabilization script.')
     parser.add_argument('--stabilize', action='store_true', help='Whether to stabilize')
-    parser.add_argument('--resolution', type=str, default='1280x720', help='Resolution of the video frames (e.g., 1280x720)')
+    parser.add_argument('--resolution', type=str, default=STREAMING_FRAMESIZE, help='Resolution of the video frames (e.g., 1280x720)')
     parser.add_argument('--destination_ip', type=str, default='192.168.1.124', help='Destination IP address for RTP stream')
     parser.add_argument('--destination_port', type=int, default=5600, help='Destination port for RTP stream')
     parser.add_argument('--bitrate', type=int, default=1000000, help='Streaming bitrate in kbps')

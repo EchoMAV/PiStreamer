@@ -1,13 +1,15 @@
 from typing import Final
 from enum import Enum
 
-COMMANDS_FILE_PATH:Final = "/tmp/pistreamer"
-FIFO_CAM_PATH:Final = "/tmp/imx477"
 FRAMERATE: Final = 30
+MIN_ZOOM: Final = 1.0
+MAX_ZOOM: Final = 8.0
 DEFAULT_CONFIG_PATH: Final = "477-Pi4.json"
-STABILIZATION_FRAMERATE: Final = "640x360"
+STABILIZATION_FRAMESIZE: Final = "640x360" # Pretty low
+STREAMING_FRAMESIZE: Final = "1280x720" # 720p
+STILL_FRAMESIZE: Final = "3840x2160" # 4K
 
-class PiCameraCommand(Enum):
+class CommandType(Enum):
     STOP = "stop"
     KILL = "kill"
     BITRATE = "bitrate"
@@ -15,6 +17,8 @@ class PiCameraCommand(Enum):
     IP_ADDRESS = "ip_address"
     RECORD = "record"
     STOP_RECORDING = "stop_recording"
+    ZOOM = "zoom"
+    TAKE_PHOTO = "take_photo"
 
 class CommandStatus(Enum):
     PENDING = 'pending'
