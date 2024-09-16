@@ -15,3 +15,9 @@ class PiCameraCommand(Enum):
     IP_ADDRESS = "ip_address"
     RECORD = "record"
     STOP_RECORDING = "stop_recording"
+
+class CommandStatus(Enum):
+    PENDING = 'pending'
+    RUNNING = 'running'
+    COMPLETED = 'completed'
+    FAILED = 'failed'
