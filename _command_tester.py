@@ -4,6 +4,7 @@ from command_model import add_command, initialize_db
 from constants import CommandStatus, CommandType
 
 initialize_db()
-# add_command(command_type=CommandType.ZOOM.value, command_value="1.0")
-add_command(command_type=CommandType.RECORD.value)
+
+# Modify the command_type and command_value as needed
+add_command(command_type=CommandType.ZOOM.value, command_value="1.0")
 add_command(command_type=CommandType.TAKE_PHOTO.value)
