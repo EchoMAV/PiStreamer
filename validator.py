@@ -1,44 +1,46 @@
 import argparse
 import os
 import ipaddress
-from typing import Optional
+from typing import Any, Optional
 
-class Validator():
-    def __init__(self, args: Optional[argparse.ArgumentParser] = None) -> None:
+
+class Validator:
+    def __init__(self, args: Optional[Any] = None) -> None:
         self.args = args
         if self.args:
             self._validate_args()
 
-    def _validate_args(self) -> None:
-        self.validate_ip(self.args.destination_ip)
-        self.validate_port(self.args.destination_port)
-        self.validate_bitrate(self.args.bitrate)
-        self.is_json_file(self.args.config_file)
+    def _validate_args(self) -> bool:
+        if not self.args:
+            return False
+        ret = self.validate_ip(str(self.args.destination_ip))
+        ret &= self.validate_port(str(self.args.destination_port))
+        ret &= self.validate_bitrate(str(self.args.bitrate))
+        ret &= self.is_json_file(str(self.args.config_file))
+        return ret
 
-    def validate_ip(self, ip: str) -> None:
-            try:
-                ipaddress.ip_address(ip)
-                return True
-            except ValueError:
-                return False
-
-    def validate_port(self, port: str) -> None:
+    def validate_ip(self, ip: str) -> bool:
         try:
-            port = int(port)
-            if 1 <= port <= 65535:
+            ipaddress.ip_address(ip)
+            return True
+        except ValueError:
+            return False
+
+    def validate_port(self, port: str) -> bool:
+        try:
+            if 1 <= int(port) <= 65535:
                 return True
             return False
         except ValueError:
             return False
 
-    def validate_bitrate(self, bitrate: str) -> None:
+    def validate_bitrate(self, bitrate: str) -> bool:
         try:
-            bitrate = int(bitrate)
-            if 500 <= bitrate <= 10000:
+            if 500 <= int(bitrate) <= 10000:
                 return True
             return False
         except ValueError:
             return False
-        
-    def is_json_file(str, file_name:str) -> None:   
-        return os.path.isfile(file_name) and file_name.lower().endswith('.json')
+
+    def is_json_file(str, file_name: str) -> bool:
+        return os.path.isfile(file_name) and file_name.lower().endswith(".json")
