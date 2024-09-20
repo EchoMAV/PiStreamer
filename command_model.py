@@ -45,7 +45,7 @@ def add_command(command_type: CommandType, command_value: Optional[str] = None) 
     with db.atomic():
         CommandModel.create(
             created_at=datetime.now(),
-            command_type=command_type,
+            command_type=command_type.value,
             command_value=command_value,
             command_status=CommandStatus.PENDING.value,
         )
