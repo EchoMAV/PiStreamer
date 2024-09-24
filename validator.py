@@ -14,7 +14,11 @@ class Validator:
         if not self.args:
             return False
         ret = self.validate_ip(str(self.args.destination_ip))
-        ret &= self.validate_port(str(self.args.destination_port))
+        if self.args.atak_ip:
+            ret = self.validate_ip(str(self.args.atak_ip))
+        if self.args.atak_port:
+            ret &= self.validate_port(str(self.args.destination_port))
+        ret &= self.validate_port(str(self.args.atak_port))
         ret &= self.validate_bitrate(str(self.args.bitrate))
         ret &= self.is_json_file(str(self.args.config_file))
         return ret

@@ -33,6 +33,21 @@ class CommandController:
                 )
         elif command.command_type == CommandType.STOP_RECORDING.value:
             self.pi_streamer.stop_recording()
+        elif command.command_type == CommandType.ATAK_HOST.value:
+            try:
+                ip, port = str(command.command_value).split(" ")[0].split(":")
+                if not self.validator.validate_ip(ip):
+                    raise Exception(f"Error: {ip} is not a valid ip.")
+                if not self.validator.validate_port(port):
+                    raise Exception(f"Error: {port} is not a valid port.")
+                print(f"Setting new ATAK IP: {ip} and port: {port}")
+                self.pi_streamer.start_atak_stream(ip=ip, port=port)
+            except (IndexError, ValueError):
+                raise Exception(
+                    "Invalid bitrate command. Use 'bitrate <value>' where value is an int 500-10000 kbps."
+                )
+        elif command.command_type == CommandType.STOP_ATAK.value:
+            self.pi_streamer.stop_atak_stream()
         elif command.command_type == CommandType.BITRATE.value:
             try:
                 bitrate = str(command.command_value)
@@ -40,10 +55,9 @@ class CommandController:
                     raise Exception(
                         f"Error: {bitrate} is not a valid bitrate. It must be between 500 and 10000 kbps."
                     )
-                else:
-                    print(f"Setting new bitrate: {bitrate} kbps")
-                    bitrate = bitrate * 1000
-                    self.reset_stream("streaming_bitrate", bitrate)
+                print(f"Setting new bitrate: {bitrate} kbps")
+                bitrate = bitrate * 1000
+                self.reset_stream("streaming_bitrate", bitrate)
             except (IndexError, ValueError):
                 raise Exception(
                     "Invalid bitrate command. Use 'bitrate <value>' where value is an int 500-10000 kbps."
@@ -55,9 +69,8 @@ class CommandController:
                     raise Exception(
                         f"Error: {new_port} is not a valid port. It must be between 1 and 65535."
                     )
-                else:
-                    print(f"Setting new port: {new_port}")
-                    self.reset_stream("destination_port", new_port)
+                print(f"Setting new port: {new_port}")
+                self.reset_stream("destination_port", new_port)
             except (IndexError, ValueError):
                 raise Exception(
                     "Invalid port command. Use 'port <value>' where value is an int between 1 and 65535."
@@ -67,9 +80,8 @@ class CommandController:
                 new_iP = str(command.command_value)
                 if not self.validator.validate_ip(new_iP):
                     raise Exception(f"Error: {new_iP} is not a valid IP Address.")
-                else:
-                    print(f"Setting new IP: {new_iP}")
-                    self.reset_stream("destination_ip", new_iP)
+                print(f"Setting new IP: {new_iP}")
+                self.reset_stream("destination_ip", new_iP)
             except (IndexError, ValueError):
                 raise Exception(
                     "Invalid ip command. Use 'ip <value>' where value is a valid ip address."

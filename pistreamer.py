@@ -126,7 +126,9 @@ def handle_command(command, picam2):
                     f"Error: {bitrate} is not a valid bitrate. It must be between 500 and 10000 kbps."
                 )
             else:
-                print(f"Setting new bitrate: {newBitrate} kbps with IP: {ip} and Port: {port}")
+                print(
+                    f"Setting new bitrate: {newBitrate} kbps with IP: {ip} and Port: {port}"
+                )
                 bit = newBitrate
                 set_stream(picam2, ip, port, newBitrate)
         except (IndexError, ValueError):

@@ -3,6 +3,7 @@
 from command_model import add_command, initialize_db
 from constants import CommandStatus, CommandType
 import time
+
 initialize_db()
 
 # Modify the command_type and command_value as needed

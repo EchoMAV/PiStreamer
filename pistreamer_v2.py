@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 
-from typing import Any
+from typing import Any, Optional, Union
+from ffmpeg_configs import (
+    get_ffmpeg_command_atak,
+    get_ffmpeg_command_mp4,
+    get_ffmpeg_command_rtp,
+)
 from picamera2 import Picamera2
 import cv2
 import numpy as np
@@ -24,6 +29,7 @@ from constants import (
     CommandStatus,
     STILL_FRAMESIZE,
 )
+from utils import get_timestamp
 from validator import Validator
 
 
@@ -35,6 +41,8 @@ class PiStreamer2:
         destination_ip: str,
         destination_port: int,
         streaming_bitrate: int,
+        atak_ip: Optional[str] = None,
+        atak_port: Optional[Union[str, int]] = None,
     ) -> None:
         from command_controller import CommandController
 
@@ -49,11 +57,15 @@ class PiStreamer2:
         self.command_controller: CommandController = None  # type: ignore # this is set later in _set_command_controller
         self.destination_ip = destination_ip
         self.destination_port = destination_port
+        self.atak_ip = atak_ip
+        self.atak_port = atak_port
         self.ffmpeg_process_mp4 = None
         self.ffmpeg_process_rtp = None
+        self.ffmpeg_process_atak = None
         self.streaming_bitrate = streaming_bitrate
         self.original_size = (0, 0)
         self.is_recording = False
+        self.is_atak_streaming = False
         self.recording_start_time = 0
         tuning = Picamera2.load_tuning_file(Path("./477-Pi4.json").resolve())
         self.picam2 = Picamera2(tuning=tuning)
@@ -64,83 +76,34 @@ class PiStreamer2:
             main={"size": tuple(map(int, STILL_FRAMESIZE.split("x")))}
         )
 
-    def _get_timestamp(self) -> str:
-        return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
     def _init_ffmpeg_processes(self) -> None:
         """
         Used to configure both the rtp and mp4 FFmpeg commands.
         """
         self._close_ffmpeg_processes()
 
-        # Used for saving data to disk
-        self.ffmpeg_command_mp4 = [
-            "ffmpeg",
-            "-y",  # Overwrite output files without asking
-            "-f",
-            "rawvideo",  # Input format
-            "-pix_fmt",
-            "yuv420p",  # Pixel format
-            "-s",
-            f"{self.resolution[0]}x{self.resolution[1]}",  # Frame size
-            "-r",
-            str(FRAMERATE),  # Frame rate
-            "-i",
-            "-",  # Input from stdin
-            "-f",
-            "lavfi",
-            "-i",
-            "anullsrc=r=44100:cl=stereo",  # Add silent audio track
-            "-shortest",  # Ensure the shortest stream ends the output
-            "-c:v",
-            "h264_v4l2m2m",  # Hardware acceleration
-            "-preset",
-            "ultrafast",  # Faster encoding
-            "-tune",
-            "zerolatency",  # Tune for low latency
-            "-b:v",
-            "1M",  # Video bitrate
-            "-movflags",
-            "+faststart",  # Prepare the file for playback
-            "-f",
-            "mp4",  # Save to mp4
-            f"{self._get_timestamp()}.mp4",  # Output file pattern
-        ]
+        self.ffmpeg_command_mp4 = get_ffmpeg_command_mp4(
+            self.resolution, str(FRAMERATE)
+        )
+        self.ffmpeg_command_rtp = get_ffmpeg_command_rtp(
+            self.resolution,
+            str(FRAMERATE),
+            self.destination_ip,
+            str(self.destination_port),
+            str(self.streaming_bitrate),
+        )
+        if self.atak_ip and self.atak_port:
+            self.ffmpeg_command_atak = get_ffmpeg_command_atak(
+                self.resolution,
+                str(FRAMERATE),
+                self.atak_ip,
+                str(self.atak_port),
+                str(self.streaming_bitrate),
+            )
+        else:
+            self.ffmpeg_command_atak = None
 
-        # Used for streaming video to GCS
-        self.ffmpeg_command_rtp = [
-            "ffmpeg",
-            "-y",  # Overwrite output files without asking
-            "-f",
-            "rawvideo",  # Input format
-            "-pix_fmt",
-            "yuv420p",  # Pixel format
-            "-s",
-            f"{self.resolution[0]}x{self.resolution[1]}",  # Frame size
-            "-r",
-            str(FRAMERATE),  # Frame rate
-            "-i",
-            "-",  # Input from stdin
-            "-c:v",
-            "h264_v4l2m2m",  # Hardware acceleration
-            "-preset",
-            "ultrafast",  # Faster encoding
-            "-tune",
-            "zerolatency",  # Tune for low latency
-            "-bufsize",
-            "64k",  # Reduce buffer size
-            "-b:v",
-            str(self.streaming_bitrate),  # Set video bitrate
-            "-flags",
-            "low_delay",  # Low delay for RTP
-            "-fflags",
-            "nobuffer",  # No buffer for RTP
-            "-f",
-            "rtp",  # Output format for RTP
-            f"rtp://{self.destination_ip}:{self.destination_port}",
-        ]
-
-        # Start the FFmpeg processes (mp4 only if we are recording)
+        # Start the RTP FFmpeg process only (mp4 and/or ATAK only if activated)
         self.ffmpeg_process_rtp = subprocess.Popen(  # type: ignore
             self.ffmpeg_command_rtp, stdin=subprocess.PIPE
         )
@@ -219,6 +182,32 @@ class PiStreamer2:
                 self.ffmpeg_process_mp4.stdin.close()
             self.ffmpeg_process_mp4.wait()
 
+    def start_atak_stream(self, ip: str, port: str) -> None:
+        if self.is_atak_streaming:
+            print("Already ATAK streaming...")
+            return
+        self.atak_ip = ip
+        self.atak_port = port
+        self.ffmpeg_command_atak = get_ffmpeg_command_atak(
+            self.resolution,
+            str(FRAMERATE),
+            self.atak_ip,
+            str(self.atak_port),
+            str(self.streaming_bitrate),
+        )
+        self.ffmpeg_process_atak = subprocess.Popen(  # type: ignore
+            self.ffmpeg_command_atak, stdin=subprocess.PIPE
+        )
+        self.is_atak_streaming = True
+
+    def stop_atak_stream(self) -> None:
+        self.is_atak_streaming = False
+        if self.ffmpeg_process_atak:
+            print("Stopping ATAK streaming...")
+            if self.ffmpeg_process_atak.stdin:
+                self.ffmpeg_process_atak.stdin.close()
+            self.ffmpeg_process_atak.wait()
+
     def take_photo(self) -> None:
         """
         Since photos are taken at higher resolution than streaming, the picam2 must stop and
@@ -227,7 +216,7 @@ class PiStreamer2:
         self.picam2.stop()
         self.picam2.configure(self.photo_config)
         self.picam2.start()
-        self.picam2.capture_file(f"{self._get_timestamp()}.jpg")
+        self.picam2.capture_file(f"{get_timestamp()}.jpg")
         self.picam2.stop()
         self.picam2.configure(self.streaming_config)
         self.picam2.start()
@@ -369,6 +358,18 @@ if __name__ == "__main__":
         type=int,
         default=5600,
         help="Destination port for RTP stream",
+    )
+    parser.add_argument(
+        "--atak_ip",
+        type=str,
+        null=True,
+        help="Destination ATAK IP address for RTP stream",
+    )
+    parser.add_argument(
+        "--atak_port",
+        type=int,
+        null=True,
+        help="Destination ATAK port for RTP stream",
     )
     parser.add_argument(
         "--bitrate", type=int, default=2000000, help="Streaming bitrate in bps"
