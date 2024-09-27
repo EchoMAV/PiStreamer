@@ -1,3 +1,4 @@
+from typing import List
 from utils import get_timestamp
 
 
@@ -23,10 +24,6 @@ def get_ffmpeg_command_mp4(resolution: tuple[str, str], framerate: str) -> list[
         "-shortest",  # Ensure the shortest stream ends the output
         "-c:v",
         "h264_v4l2m2m",  # Hardware acceleration
-        "-preset",
-        "ultrafast",  # Faster encoding
-        "-tune",
-        "zerolatency",  # Tune for low latency
         "-b:v",
         "1M",  # Video bitrate
         "-movflags",
@@ -43,7 +40,7 @@ def get_ffmpeg_command_rtp(
     destination_ip: str,
     destination_port: str,
     streaming_bitrate: str,
-) -> list[str]:
+) -> List[str]:
     # Used for streaming video to GCS
     return [
         "ffmpeg",
@@ -60,10 +57,6 @@ def get_ffmpeg_command_rtp(
         "-",  # Input from stdin
         "-c:v",
         "h264_v4l2m2m",  # Hardware acceleration
-        "-preset",
-        "ultrafast",  # Faster encoding
-        "-tune",
-        "zerolatency",  # Tune for low latency
         "-bufsize",
         "64k",  # Reduce buffer size
         "-b:v",
@@ -101,10 +94,6 @@ def get_ffmpeg_command_atak(
         "-",  # Input from stdin
         "-c:v",
         "h264_v4l2m2m",  # Hardware acceleration
-        "-preset",
-        "ultrafast",  # Faster encoding
-        "-tune",
-        "zerolatency",  # Tune for low latency
         "-bufsize",
         "64k",  # Reduce buffer size
         "-b:v",
@@ -115,5 +104,5 @@ def get_ffmpeg_command_atak(
         "nobuffer",  # No buffer for RTP
         "-f",
         "mpegts",  # Output format for MPEG-TS
-        f"rtp://{destination_ip}:{destination_port}",
+        f"udp://{destination_ip}:{destination_port}",
     ]

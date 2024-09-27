@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from typing import Any, Optional, Union
+from command_service import CommandService
 from ffmpeg_configs import (
     get_ffmpeg_command_atak,
     get_ffmpeg_command_mp4,
@@ -13,14 +14,7 @@ import time
 import subprocess
 import argparse
 from pathlib import Path
-from datetime import datetime
 import sys
-from command_model import (
-    get_pending_command,
-    initialize_db,
-    update_command_status_failure,
-    update_command_status,
-)
 from constants import (
     DEFAULT_CONFIG_PATH,
     FRAMERATE,
@@ -55,6 +49,7 @@ class PiStreamer2:
             )
         self.resolution = tuple(map(int, resolution.split("x")))
         self.command_controller: CommandController = None  # type: ignore # this is set later in _set_command_controller
+        self.command_service: CommandService = CommandService()
         self.destination_ip = destination_ip
         self.destination_port = destination_port
         self.atak_ip = atak_ip
@@ -165,6 +160,7 @@ class PiStreamer2:
         return stabilized_frame
 
     def start_recording(self) -> None:
+        # TODO try to save to .ts instead of mp4
         if self.is_recording:
             print("Already recording...")
             return
@@ -213,6 +209,7 @@ class PiStreamer2:
         Since photos are taken at higher resolution than streaming, the picam2 must stop and
         be reconfigured before the photo can be taken. Once taken, the streaming config is reapplied.
         """
+        # TODO only change res if we need to
         self.picam2.stop()
         self.picam2.configure(self.photo_config)
         self.picam2.start()
@@ -250,6 +247,7 @@ class PiStreamer2:
 
     def _close_ffmpeg_processes(self) -> None:
         self.stop_recording()
+        self.stop_atak_stream()
         if self.ffmpeg_process_rtp:
             if self.ffmpeg_process_rtp.stdin:
                 self.ffmpeg_process_rtp.stdin.close()
@@ -263,17 +261,16 @@ class PiStreamer2:
         self._close_ffmpeg_processes()
 
     def _read_and_process_commands(self) -> None:
-        command = get_pending_command()
-        if command and self.command_controller:
+        commands = self.command_service.get_pending_commands()
+        for command in commands:
+            print(f"Processing command `{command}`")
             try:
-                self.command_controller.handle_command(command)
-                update_command_status(
-                    command_id=str(command.id), new_status=CommandStatus.COMPLETED
+                self.command_controller.handle_command(
+                    command_type=command[0], command_value=command[1]
                 )
             except Exception as e:
                 msg = f"Error processing command: {e}"
                 print(msg)
-                update_command_status_failure(command_id=str(command.id), meta_data=msg)
 
     def stream(self) -> None:
         # Start the ffmpeg processes
@@ -318,15 +315,24 @@ class PiStreamer2:
                 # Convert the frame back to YUV format before sending to FFmpeg
                 frame_8bit = cv2.convertScaleAbs(frame)
                 frame_yuv = cv2.cvtColor(frame_8bit, cv2.COLOR_RGB2YUV_I420)
+                pure_frame_yuv_bytes = frame_yuv.tobytes()
+                modified_frame_yuv_bytes = None
 
                 # Forward the stabilized frame to rtp
                 if self.is_recording:
                     # mp4 should not have 'REC' appearing in the frame
-                    self.ffmpeg_process_mp4.stdin.write(frame_yuv.tobytes())  # type: ignore
+                    self.ffmpeg_process_mp4.stdin.write(pure_frame_yuv_bytes)  # type: ignore
                     frame_8bit_rec = self._draw_rec(frame_8bit)
                     frame_yuv = cv2.cvtColor(frame_8bit_rec, cv2.COLOR_RGB2YUV_I420)
+                    modified_frame_yuv_bytes = frame_yuv.tobytes()
 
-                self.ffmpeg_process_rtp.stdin.write(frame_yuv.tobytes())  # type: ignore
+                if not modified_frame_yuv_bytes:
+                    modified_frame_yuv_bytes = pure_frame_yuv_bytes
+
+                if self.is_atak_streaming:
+                    self.ffmpeg_process_atak.stdin.write(modified_frame_yuv_bytes)  # type: ignore
+
+                self.ffmpeg_process_rtp.stdin.write(modified_frame_yuv_bytes)  # type: ignore
 
                 # Break the loop on 'q' key press
                 if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -338,7 +344,6 @@ class PiStreamer2:
 
 if __name__ == "__main__":
     # Argument parsing
-    initialize_db()
     parser = argparse.ArgumentParser(description="Video stabilization script.")
     parser.add_argument("--stabilize", action="store_true", help="Whether to stabilize")
     parser.add_argument(
@@ -362,13 +367,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--atak_ip",
         type=str,
-        null=True,
+        default="",
         help="Destination ATAK IP address for RTP stream",
     )
     parser.add_argument(
         "--atak_port",
         type=int,
-        null=True,
+        default=0,
         help="Destination ATAK port for RTP stream",
     )
     parser.add_argument(
