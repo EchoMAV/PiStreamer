@@ -32,6 +32,10 @@ class CommandController:
                 )
         elif command_type == CommandType.STOP_RECORDING.value:
             self.pi_streamer.stop_recording()
+        elif command_type == CommandType.START_GCS_STREAM.value:
+            self.pi_streamer.start_gcs_stream()
+        elif command_type == CommandType.STOP_GCS_STREAM.value:
+            self.pi_streamer.stop_gcs_stream()
         elif command_type == CommandType.ATAK_HOST.value:
             try:
                 ip, port = str(command_value).split(" ")[0].split(":")

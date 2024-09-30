@@ -1,8 +1,8 @@
-from typing import List
+from typing import List, Tuple
 from utils import get_timestamp
 
 
-def get_ffmpeg_command_mp4(resolution: tuple[str, str], framerate: str) -> list[str]:
+def get_ffmpeg_command_record(resolution: Tuple[int, ...], framerate: str) -> List[str]:
     # Used for saving data to disk
     return [
         "ffmpeg",
@@ -29,13 +29,13 @@ def get_ffmpeg_command_mp4(resolution: tuple[str, str], framerate: str) -> list[
         "-movflags",
         "+faststart",  # Prepare the file for playback
         "-f",
-        "mp4",  # Save to mp4
-        f"{get_timestamp()}.mp4",  # Output file pattern
+        "mpegts",  # Save to mpegts
+        f"{get_timestamp()}.ts",  # Output file pattern
     ]
 
 
-def get_ffmpeg_command_rtp(
-    resolution: tuple[str, str],
+def get_ffmpeg_command_gcs(
+    resolution: Tuple[int, ...],
     framerate: str,
     destination_ip: str,
     destination_port: str,
@@ -72,12 +72,12 @@ def get_ffmpeg_command_rtp(
 
 
 def get_ffmpeg_command_atak(
-    resolution: tuple[str, str],
+    resolution: Tuple[int, ...],
     framerate: str,
     destination_ip: str,
     destination_port: str,
     streaming_bitrate: str,
-) -> list[str]:
+) -> List[str]:
     # Used for streaming video to ATAK
     return [
         "ffmpeg",

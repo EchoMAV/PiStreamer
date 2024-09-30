@@ -20,6 +20,8 @@ class CommandType(Enum):
     IP_ADDRESS = "ip_address"
     RECORD = "record"
     STOP_RECORDING = "stop_recording"
+    START_GCS_STREAM = "start_gcs_stream"
+    STOP_GCS_STREAM = "stop_gcs_stream"
     ZOOM = "zoom"
     TAKE_PHOTO = "take_photo"
     ATAK_HOST = "atak_host"  # `atak_host 192.168.1.1:5600` is an example

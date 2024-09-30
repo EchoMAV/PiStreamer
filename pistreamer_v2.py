@@ -4,8 +4,8 @@ from typing import Any, Optional, Union
 from command_service import CommandService
 from ffmpeg_configs import (
     get_ffmpeg_command_atak,
-    get_ffmpeg_command_mp4,
-    get_ffmpeg_command_rtp,
+    get_ffmpeg_command_record,
+    get_ffmpeg_command_gcs,
 )
 from picamera2 import Picamera2
 import cv2
@@ -32,9 +32,9 @@ class PiStreamer2:
         self,
         stabilize: bool,
         resolution: str,
-        destination_ip: str,
-        destination_port: int,
         streaming_bitrate: int,
+        gcs_ip: Optional[str] = None,
+        gcs_port: Optional[str] = None,
         atak_ip: Optional[str] = None,
         atak_port: Optional[Union[str, int]] = None,
     ) -> None:
@@ -47,21 +47,20 @@ class PiStreamer2:
             print(
                 f"Forcing resolution to {STABILIZATION_FRAMESIZE} for stabilization performance."
             )
-        self.resolution = tuple(map(int, resolution.split("x")))
+
+        # utilities
         self.command_controller: CommandController = None  # type: ignore # this is set later in _set_command_controller
         self.command_service: CommandService = CommandService()
-        self.destination_ip = destination_ip
-        self.destination_port = destination_port
+        self.resolution = tuple(map(int, resolution.split("x")))
+        # video settings
+        self.gcs_ip = gcs_ip
+        self.gcs_port = gcs_port
         self.atak_ip = atak_ip
         self.atak_port = atak_port
-        self.ffmpeg_process_mp4 = None
-        self.ffmpeg_process_rtp = None
-        self.ffmpeg_process_atak = None
         self.streaming_bitrate = streaming_bitrate
         self.original_size = (0, 0)
-        self.is_recording = False
-        self.is_atak_streaming = False
         self.recording_start_time = 0
+        # picamera config
         tuning = Picamera2.load_tuning_file(Path("./477-Pi4.json").resolve())
         self.picam2 = Picamera2(tuning=tuning)
         self.streaming_config = self.picam2.create_preview_configuration(
@@ -70,23 +69,30 @@ class PiStreamer2:
         self.photo_config = self.picam2.create_preview_configuration(
             main={"size": tuple(map(int, STILL_FRAMESIZE.split("x")))}
         )
+        # ffmpeg processes
+        self.is_recording = False
+        self.is_gcs_streaming = False
+        self.is_atak_streaming = False
+        self.ffmpeg_process_record = None
+        self.ffmpeg_process_gcs = None
+        self.ffmpeg_process_atak = None
 
     def _init_ffmpeg_processes(self) -> None:
-        """
-        Used to configure both the rtp and mp4 FFmpeg commands.
-        """
         self._close_ffmpeg_processes()
 
-        self.ffmpeg_command_mp4 = get_ffmpeg_command_mp4(
+        self.ffmpeg_command_record = get_ffmpeg_command_record(
             self.resolution, str(FRAMERATE)
         )
-        self.ffmpeg_command_rtp = get_ffmpeg_command_rtp(
-            self.resolution,
-            str(FRAMERATE),
-            self.destination_ip,
-            str(self.destination_port),
-            str(self.streaming_bitrate),
-        )
+        if self.gcs_ip and self.gcs_port:
+            self.ffmpeg_command_gcs = get_ffmpeg_command_gcs(
+                self.resolution,
+                str(FRAMERATE),
+                self.gcs_ip,
+                str(self.gcs_port),
+                str(self.streaming_bitrate),
+            )
+        else:
+            self.ffmpeg_command_gcs = None  # type: ignore
         if self.atak_ip and self.atak_port:
             self.ffmpeg_command_atak = get_ffmpeg_command_atak(
                 self.resolution,
@@ -96,12 +102,7 @@ class PiStreamer2:
                 str(self.streaming_bitrate),
             )
         else:
-            self.ffmpeg_command_atak = None
-
-        # Start the RTP FFmpeg process only (mp4 and/or ATAK only if activated)
-        self.ffmpeg_process_rtp = subprocess.Popen(  # type: ignore
-            self.ffmpeg_command_rtp, stdin=subprocess.PIPE
-        )
+            self.ffmpeg_command_atak = None  # type: ignore
 
     def __del__(self):
         self.stop_and_clean_all()
@@ -132,11 +133,11 @@ class PiStreamer2:
         p1, st, err = cv2.calcOpticalFlowPyrLK(self.prev_gray, gray, p0, None)
         if p1 is None or st is None:
             print(f"Optical flow calculation failed, skipping... {err}")
-            self.prev_gray = gray
+            self.prev_gray = gray  # type: ignore
             return frame
 
         # Select good points
-        good_new = p1[st == 1]
+        good_new = p1[st == 1]  # type: ignore
         good_old = p0[st == 1]
 
         # Calculate the transformation matrix
@@ -152,31 +153,57 @@ class PiStreamer2:
             )
         except cv2.error as e:
             print(f"Error applying warpAffine: {e}")
-            stabilized_frame = frame
+            stabilized_frame = frame  # type: ignore
 
         # Update the previous frame and gray image
-        self.prev_gray = gray
+        self.prev_gray = gray  # type: ignore
 
         return stabilized_frame
 
     def start_recording(self) -> None:
-        # TODO try to save to .ts instead of mp4
         if self.is_recording:
             print("Already recording...")
             return
         self.recording_start_time = int(time.time())
-        self.ffmpeg_process_mp4 = subprocess.Popen(  # type: ignore
-            self.ffmpeg_command_mp4, stdin=subprocess.PIPE
+        self.ffmpeg_process_record = subprocess.Popen(  # type: ignore
+            self.ffmpeg_command_record, stdin=subprocess.PIPE
         )
         self.is_recording = True
 
     def stop_recording(self) -> None:
         self.is_recording = False
-        if self.ffmpeg_process_mp4:
+        if self.ffmpeg_process_record:
             print("Stopping recording...")
-            if self.ffmpeg_process_mp4.stdin:
-                self.ffmpeg_process_mp4.stdin.close()
-            self.ffmpeg_process_mp4.wait()
+            if self.ffmpeg_process_record.stdin:
+                self.ffmpeg_process_record.stdin.close()
+            self.ffmpeg_process_record.wait()
+
+    def start_gcs_stream(self) -> None:
+        if self.is_gcs_streaming:
+            print("Already GCS streaming...")
+            return
+        if not self.gcs_ip or not self.gcs_port:
+            print("GCS IP or port not set, cannot start GCS stream.")
+            return
+        self.ffmpeg_command_gcs = get_ffmpeg_command_gcs(
+            self.resolution,
+            str(FRAMERATE),
+            self.gcs_ip,
+            str(self.gcs_port),
+            str(self.streaming_bitrate),
+        )
+        self.ffmpeg_process_gcs = subprocess.Popen(  # type: ignore
+            self.ffmpeg_command_gcs, stdin=subprocess.PIPE
+        )
+        self.is_gcs_streaming = True
+
+    def stop_gcs_stream(self) -> None:
+        self.is_gcs_streaming = False
+        if self.ffmpeg_process_gcs:
+            print("Stopping GCS stream...")
+            if self.ffmpeg_process_gcs.stdin:
+                self.ffmpeg_process_gcs.stdin.close()
+            self.ffmpeg_process_gcs.wait()
 
     def start_atak_stream(self, ip: str, port: str) -> None:
         if self.is_atak_streaming:
@@ -208,15 +235,26 @@ class PiStreamer2:
         """
         Since photos are taken at higher resolution than streaming, the picam2 must stop and
         be reconfigured before the photo can be taken. Once taken, the streaming config is reapplied.
+        If the photo resolution is the same as the streaming resolution, the picam2 does not need to
+        change resolution.
         """
-        # TODO only change res if we need to
-        self.picam2.stop()
-        self.picam2.configure(self.photo_config)
-        self.picam2.start()
+        if not self.is_gcs_streaming:
+            return
+        is_same_resolution = (
+            tuple(map(int, STILL_FRAMESIZE.split("x"))) == self.resolution
+        )
+
+        if not is_same_resolution:
+            self.picam2.stop()
+            self.picam2.configure(self.photo_config)
+            self.picam2.start()
+
         self.picam2.capture_file(f"{get_timestamp()}.jpg")
-        self.picam2.stop()
-        self.picam2.configure(self.streaming_config)
-        self.picam2.start()
+
+        if not is_same_resolution:
+            self.picam2.stop()
+            self.picam2.configure(self.streaming_config)
+            self.picam2.start()
 
     def _format_duration(self, seconds: int) -> str:
         """Convert a duration in seconds to a minutes:seconds format."""
@@ -226,7 +264,7 @@ class PiStreamer2:
 
     def _draw_rec(self, frame: np.ndarray) -> np.ndarray:
         """
-        Paints "REC" on the top of the rtp stream (but not the mp4).
+        Paints "REC" on the top of streams (but not the saved video).
         """
         text = (
             f"REC {self._format_duration(int(time.time() - self.recording_start_time))}"
@@ -248,10 +286,10 @@ class PiStreamer2:
     def _close_ffmpeg_processes(self) -> None:
         self.stop_recording()
         self.stop_atak_stream()
-        if self.ffmpeg_process_rtp:
-            if self.ffmpeg_process_rtp.stdin:
-                self.ffmpeg_process_rtp.stdin.close()
-            self.ffmpeg_process_rtp.wait()
+        if self.ffmpeg_process_gcs:
+            if self.ffmpeg_process_gcs.stdin:
+                self.ffmpeg_process_gcs.stdin.close()
+            self.ffmpeg_process_gcs.wait()
 
     def stop_and_clean_all(self) -> None:
         print("Stopping and cleaning camera resources...")
@@ -269,12 +307,12 @@ class PiStreamer2:
                     command_type=command[0], command_value=command[1]
                 )
             except Exception as e:
-                msg = f"Error processing command: {e}"
-                print(msg)
+                print(f"Error processing command: {e}")
 
     def stream(self) -> None:
         # Start the ffmpeg processes
         self._init_ffmpeg_processes()
+
         # Start the camera
         self.picam2.configure(self.streaming_config)
         self.picam2.start()
@@ -320,8 +358,8 @@ class PiStreamer2:
 
                 # Forward the stabilized frame to rtp
                 if self.is_recording:
-                    # mp4 should not have 'REC' appearing in the frame
-                    self.ffmpeg_process_mp4.stdin.write(pure_frame_yuv_bytes)  # type: ignore
+                    # video should not have 'REC' appearing in the frame
+                    self.ffmpeg_process_record.stdin.write(pure_frame_yuv_bytes)  # type: ignore
                     frame_8bit_rec = self._draw_rec(frame_8bit)
                     frame_yuv = cv2.cvtColor(frame_8bit_rec, cv2.COLOR_RGB2YUV_I420)
                     modified_frame_yuv_bytes = frame_yuv.tobytes()
@@ -332,7 +370,8 @@ class PiStreamer2:
                 if self.is_atak_streaming:
                     self.ffmpeg_process_atak.stdin.write(modified_frame_yuv_bytes)  # type: ignore
 
-                self.ffmpeg_process_rtp.stdin.write(modified_frame_yuv_bytes)  # type: ignore
+                if self.is_gcs_streaming:
+                    self.ffmpeg_process_gcs.stdin.write(modified_frame_yuv_bytes)  # type: ignore
 
                 # Break the loop on 'q' key press
                 if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -353,16 +392,16 @@ if __name__ == "__main__":
         help="Resolution of the video frames (e.g., 1280x720)",
     )
     parser.add_argument(
-        "--destination_ip",
+        "--gcs_ip",
         type=str,
         default="192.168.1.124",
-        help="Destination IP address for RTP stream",
+        help="Destination IP address for GCS stream",
     )
     parser.add_argument(
-        "--destination_port",
+        "--gcs_port",
         type=int,
         default=5600,
-        help="Destination port for RTP stream",
+        help="Destination port for GCS stream",
     )
     parser.add_argument(
         "--atak_ip",
@@ -392,11 +431,13 @@ if __name__ == "__main__":
         print(f"Validation Error: {e}")
         sys.exit(1)
     pi_streamer = PiStreamer2(
-        args.stabilize,
-        args.resolution,
-        args.destination_ip,
-        args.destination_port,
-        args.bitrate,
+        stabilize=args.stabilize,
+        resolution=args.resolution,
+        streaming_bitrate=args.bitrate,
+        gcs_ip=args.gcs_ip,
+        gcs_port=args.gcs_port,
+        atak_ip=args.atak_ip,
+        atak_port=args.atak_port,
     )
     from command_controller import CommandController
 

@@ -256,7 +256,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if args.daemon:
-        pid = os.fork()
+        pid = os.fork()  # type:ignore
         if pid > 0:
             # Exit the parent process
             print(f"Forked to background with PID {pid}")
