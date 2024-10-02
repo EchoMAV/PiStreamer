@@ -92,7 +92,6 @@ class CommandController:
         elif command_type == CommandType.STOP.value:
             self.pi_streamer.stop_and_clean_all()
         elif command_type == CommandType.KILL.value:
-            # TODO kill daemon
             self.pi_streamer.stop_and_clean_all()
         else:
             raise Exception(f"Unknown command_type: `{command_type}`")

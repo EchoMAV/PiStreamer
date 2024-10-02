@@ -2,6 +2,7 @@
 
 from typing import Any, Optional, Union
 from command_service import CommandService
+from multiprocessing import Process
 from ffmpeg_configs import (
     get_ffmpeg_command_atak,
     get_ffmpeg_command_record,
@@ -20,7 +21,6 @@ from constants import (
     FRAMERATE,
     STABILIZATION_FRAMESIZE,
     STREAMING_FRAMESIZE,
-    CommandStatus,
     STILL_FRAMESIZE,
 )
 from utils import get_timestamp
@@ -37,21 +37,15 @@ class PiStreamer2:
         gcs_port: Optional[str] = None,
         atak_ip: Optional[str] = None,
         atak_port: Optional[Union[str, int]] = None,
+        config_file: str = "./477-Pi4.json",
     ) -> None:
+        # utilities
         from command_controller import CommandController
 
-        self.stabilize = stabilize
-        self.prev_gray = None
-        if self.stabilize:
-            resolution = STABILIZATION_FRAMESIZE
-            print(
-                f"Forcing resolution to {STABILIZATION_FRAMESIZE} for stabilization performance."
-            )
-
-        # utilities
         self.command_controller: CommandController = None  # type: ignore # this is set later in _set_command_controller
         self.command_service: CommandService = CommandService()
         self.resolution = tuple(map(int, resolution.split("x")))
+        self.pid = 0
         # video settings
         self.gcs_ip = gcs_ip
         self.gcs_port = gcs_port
@@ -60,8 +54,16 @@ class PiStreamer2:
         self.streaming_bitrate = streaming_bitrate
         self.original_size = (0, 0)
         self.recording_start_time = 0
+        # stabilize settings
+        self.stabilize = stabilize
+        self.prev_gray = None
+        if self.stabilize:
+            resolution = STABILIZATION_FRAMESIZE
+            print(
+                f"Forcing resolution to {STABILIZATION_FRAMESIZE} for stabilization performance."
+            )
         # picamera config
-        tuning = Picamera2.load_tuning_file(Path("./477-Pi4.json").resolve())
+        tuning = Picamera2.load_tuning_file(Path(config_file).resolve())
         self.picam2 = Picamera2(tuning=tuning)
         self.streaming_config = self.picam2.create_preview_configuration(
             main={"size": self.resolution}
@@ -285,11 +287,8 @@ class PiStreamer2:
 
     def _close_ffmpeg_processes(self) -> None:
         self.stop_recording()
+        self.stop_gcs_stream()
         self.stop_atak_stream()
-        if self.ffmpeg_process_gcs:
-            if self.ffmpeg_process_gcs.stdin:
-                self.ffmpeg_process_gcs.stdin.close()
-            self.ffmpeg_process_gcs.wait()
 
     def stop_and_clean_all(self) -> None:
         print("Stopping and cleaning camera resources...")
@@ -424,6 +423,9 @@ if __name__ == "__main__":
         default=DEFAULT_CONFIG_PATH,
         help="Relative file path for the IMX477 config json file",
     )
+    parser.add_argument(
+        "--daemon", action="store_true", help="Run script as a daemon in the background"
+    )
     args = parser.parse_args()
     try:
         Validator(args)
@@ -438,8 +440,16 @@ if __name__ == "__main__":
         gcs_port=args.gcs_port,
         atak_ip=args.atak_ip,
         atak_port=args.atak_port,
+        config_file=args.config_file,
     )
     from command_controller import CommandController
 
     controller = CommandController(pi_streamer)
-    pi_streamer.stream()
+
+    if args.daemon:
+        process = Process(target=pi_streamer.stream)
+        process.start()
+        print(f"Started stream in background with PID {process.pid}")
+        sys.exit(0)
+    else:
+        pi_streamer.stream()
