@@ -46,9 +46,9 @@ command_service.add_input_command(command_type=CommandType.START_GCS_STREAM) #st
 ```
 
 ## Daemon operation
-To fork the process and run it in the background, you can use
+To run the streamer and all ffmpeg processes in the background run the following:
 ```
-python pistreamer_v2.py --daemon
+python pistreamer_v2.py
 ```
 
 ### To kill the dameon

@@ -423,9 +423,6 @@ if __name__ == "__main__":
         default=DEFAULT_CONFIG_PATH,
         help="Relative file path for the IMX477 config json file",
     )
-    parser.add_argument(
-        "--daemon", action="store_true", help="Run script as a daemon in the background"
-    )
     args = parser.parse_args()
     try:
         Validator(args)
@@ -445,11 +442,4 @@ if __name__ == "__main__":
     from command_controller import CommandController
 
     controller = CommandController(pi_streamer)
-
-    if args.daemon:
-        process = Process(target=pi_streamer.stream)
-        process.start()
-        print(f"Started stream in background with PID {process.pid}")
-        sys.exit(0)
-    else:
-        pi_streamer.stream()
+    pi_streamer.stream()
