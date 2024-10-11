@@ -2,7 +2,6 @@
 
 from typing import Any, Optional, Union
 from command_service import CommandService
-from multiprocessing import Process
 from ffmpeg_configs import (
     get_ffmpeg_command_atak,
     get_ffmpeg_command_record,
@@ -44,7 +43,6 @@ class PiStreamer2:
 
         self.command_controller: CommandController = None  # type: ignore # this is set later in _set_command_controller
         self.command_service: CommandService = CommandService()
-        self.resolution = tuple(map(int, resolution.split("x")))
         self.pid = 0
         # video settings
         self.gcs_ip = gcs_ip
@@ -63,6 +61,7 @@ class PiStreamer2:
                 f"Forcing resolution to {STABILIZATION_FRAMESIZE} for stabilization performance."
             )
         # picamera config
+        self.resolution = tuple(map(int, resolution.split("x")))
         tuning = Picamera2.load_tuning_file(Path(config_file).resolve())
         self.picam2 = Picamera2(tuning=tuning)
         self.streaming_config = self.picam2.create_preview_configuration(
