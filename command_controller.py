@@ -20,8 +20,6 @@ class CommandController:
         """
         if command_type == CommandType.RECORD.value:
             self.pi_streamer.start_recording()
-        if command_type == CommandType.TAKE_PHOTO.value:
-            self.pi_streamer.take_photo()
         elif command_type == CommandType.ZOOM.value:
             try:
                 zoom_factor = float(str(command_value))
@@ -30,6 +28,16 @@ class CommandController:
                 raise Exception(
                     "Invalid zoom command. Use 'zoom <factor>' where factor is a float."
                 )
+        elif command_type == CommandType.STABILIZE.value:
+            try:
+                stab_value = (
+                    True if str(command_value).lower().strip() == "start" else False
+                )
+                self.pi_streamer.stabilize = stab_value
+            except Exception:
+                raise Exception("Invalid stabilization command.")
+        elif command_type == CommandType.TAKE_PHOTO.value:
+            self.pi_streamer.take_photo()
         elif command_type == CommandType.STOP_RECORDING.value:
             self.pi_streamer.stop_recording()
         elif command_type == CommandType.START_GCS_STREAM.value:

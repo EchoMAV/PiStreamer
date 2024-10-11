@@ -26,3 +26,9 @@ command_service.add_input_command(command_type=CommandType.START_GCS_STREAM)
 # command_service.add_input_command(command_type=CommandType.RECORD)
 # time.sleep(15)
 # command_service.add_input_command(command_type=CommandType.STOP_RECORDING)
+
+#######-####### STABILIZE #######-#######
+# command_service.add_input_command(command_type=CommandType.STABILIZE, command_value="start")
+command_service.add_input_command(
+    command_type=CommandType.STABILIZE, command_value="stop"
+)

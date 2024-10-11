@@ -18,7 +18,6 @@ import sys
 from constants import (
     DEFAULT_CONFIG_PATH,
     FRAMERATE,
-    STABILIZATION_FRAMESIZE,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
 )
@@ -55,11 +54,6 @@ class PiStreamer2:
         # stabilize settings
         self.stabilize = stabilize
         self.prev_gray = None
-        if self.stabilize:
-            resolution = STABILIZATION_FRAMESIZE
-            print(
-                f"Forcing resolution to {STABILIZATION_FRAMESIZE} for stabilization performance."
-            )
         # picamera config
         self.resolution = tuple(map(int, resolution.split("x")))
         tuning = Picamera2.load_tuning_file(Path(config_file).resolve())
@@ -318,9 +312,6 @@ class PiStreamer2:
 
         # Init frame
         fps = []
-        init_frame = self.picam2.capture_array()
-        if self.stabilize:
-            self.prev_gray = cv2.cvtColor(init_frame, cv2.COLOR_RGB2GRAY)
 
         # Main loop
         try:
@@ -346,6 +337,8 @@ class PiStreamer2:
                     i = 0
 
                 if self.stabilize:
+                    if self.prev_gray is None:
+                        self.prev_gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
                     frame = self._stabilize(frame)
 
                 # Convert the frame back to YUV format before sending to FFmpeg
