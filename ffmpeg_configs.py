@@ -37,8 +37,8 @@ def get_ffmpeg_command_record(resolution: Tuple[int, ...], framerate: str) -> Li
 def get_ffmpeg_command_gcs(
     resolution: Tuple[int, ...],
     framerate: str,
-    destination_ip: str,
-    destination_port: str,
+    gcs_ip: str,
+    gcs_port: str,
     streaming_bitrate: str,
 ) -> List[str]:
     # Used for streaming video to GCS
@@ -67,15 +67,15 @@ def get_ffmpeg_command_gcs(
         "nobuffer",  # No buffer for RTP
         "-f",
         "rtp",  # Output format for RTP
-        f"rtp://{destination_ip}:{destination_port}",
+        f"rtp://{gcs_ip}:{gcs_port}",
     ]
 
 
 def get_ffmpeg_command_atak(
     resolution: Tuple[int, ...],
     framerate: str,
-    destination_ip: str,
-    destination_port: str,
+    atak_ip: str,
+    atak_port: str,
     streaming_bitrate: str,
 ) -> List[str]:
     # Used for streaming video to ATAK
@@ -104,5 +104,5 @@ def get_ffmpeg_command_atak(
         "nobuffer",  # No buffer for RTP
         "-f",
         "mpegts",  # Output format for MPEG-TS
-        f"udp://{destination_ip}:{destination_port}",
+        f"udp://{atak_ip}:{atak_port}",
     ]
