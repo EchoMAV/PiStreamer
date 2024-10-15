@@ -75,7 +75,7 @@ class CommandController:
             self.pi_streamer.stop_atak_stream()
         elif command_type == CommandType.BITRATE.value:
             try:
-                bitrate = str(command_value)
+                bitrate = int(command_value)
                 if not self.validator.validate_bitrate(bitrate):
                     raise Exception(
                         f"Error: {bitrate} is not a valid bitrate. It must be between 500 and 10000 kbps."
