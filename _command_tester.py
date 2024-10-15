@@ -6,11 +6,17 @@ import time
 
 command_service = CommandService()
 
-# Modify the command_type and command_value as needed
+# Modify the command_type and command_value as needed=
+
+#######-####### BITRATE #######-#######
+command_service.add_input_command(
+    command_type=CommandType.BITRATE, command_value="2010"
+)
+
 #######-####### ZOOM #######-#######
 # command_service.add_input_command(command_type=CommandType.ZOOM, command_value="1.0")
 # command_service.add_input_command(command_type=CommandType.ZOOM, command_value="in")
-command_service.add_input_command(command_type=CommandType.ZOOM, command_value="out")
+# command_service.add_input_command(command_type=CommandType.ZOOM, command_value="out")
 # time.sleep(2)
 # command_service.add_input_command(command_type=CommandType.ZOOM, command_value="stop")
 

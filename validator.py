@@ -18,7 +18,7 @@ class Validator:
         if self.args.atak_port:
             ret &= self.validate_port(str(self.args.gcs_port))
         ret &= self.validate_port(str(self.args.atak_port))
-        ret &= self.validate_bitrate(str(self.args.bitrate))
+        ret &= self.validate_bitrate(int(self.args.bitrate))
         ret &= self.is_json_file(str(self.args.config_file))
         return ret
 
@@ -37,9 +37,9 @@ class Validator:
         except ValueError:
             return False
 
-    def validate_bitrate(self, bitrate: str) -> bool:
+    def validate_bitrate(self, bitrate: int) -> bool:
         try:
-            if 500 <= int(bitrate) <= 10000:
+            if 500 <= bitrate <= 10000:
                 return True
             return False
         except ValueError:

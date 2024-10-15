@@ -79,6 +79,7 @@ class PiStreamer2:
         self.ffmpeg_command_record = get_ffmpeg_command_record(
             self.resolution, str(FRAMERATE)
         )
+        print(f"streaming_bitrate {str(self.streaming_bitrate)}")
         if self.gcs_ip and self.gcs_port:
             self.ffmpeg_command_gcs = get_ffmpeg_command_gcs(
                 self.resolution,
