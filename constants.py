@@ -9,6 +9,7 @@ STREAMING_FRAMESIZE: Final = "1280x720"  # 720p
 STILL_FRAMESIZE: Final = "3840x2160"  # 4K
 INPUT_FIFO_PATH: Final = "/tmp/pistreamer"
 OUTPUT_FIFO_PATH: Final = "/tmp/pistreamer_output"
+ZOOM_RATE: Final = 1.65  # zoom rate per second
 
 
 class CommandType(Enum):
@@ -28,8 +29,7 @@ class CommandType(Enum):
     STABILIZE = "stabilize"
 
 
-class CommandStatus(Enum):
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
+class ZoomStatus(Enum):
+    STOP = "stop"
+    IN = "in"
+    OUT = "out"

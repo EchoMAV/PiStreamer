@@ -20,6 +20,7 @@ from constants import (
     FRAMERATE,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
+    ZoomStatus,
 )
 from utils import get_timestamp
 from validator import Validator
@@ -313,6 +314,8 @@ class PiStreamer2:
         # Init frame
         fps = []
 
+        self.start_gcs_stream()
+
         # Main loop
         try:
             i = 0
@@ -340,6 +343,12 @@ class PiStreamer2:
                     if self.prev_gray is None:
                         self.prev_gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
                     frame = self._stabilize(frame)
+
+                if (
+                    self.command_controller
+                    and self.command_controller.zoom_status != ZoomStatus.STOP.value
+                ):
+                    self.command_controller.do_continuous_zoom()
 
                 # Convert the frame back to YUV format before sending to FFmpeg
                 frame_8bit = cv2.convertScaleAbs(frame)
