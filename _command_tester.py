@@ -9,6 +9,10 @@ command_service = CommandService()
 # Modify the command_type and command_value as needed
 #######-####### ZOOM #######-#######
 # command_service.add_input_command(command_type=CommandType.ZOOM, command_value="1.0")
+command_service.add_input_command(command_type=CommandType.ZOOM, command_value="in")
+# command_service.add_input_command(command_type=CommandType.ZOOM, command_value="out")
+# time.sleep(2)
+# command_service.add_input_command(command_type=CommandType.ZOOM, command_value="stop")
 
 #######-####### PHOTO #######-#######
 # command_service.add_input_command(command_type=CommandType.TAKE_PHOTO)
@@ -19,7 +23,7 @@ command_service = CommandService()
 # )
 
 #######-####### GCS #######-#######
-command_service.add_input_command(command_type=CommandType.START_GCS_STREAM)
+# command_service.add_input_command(command_type=CommandType.START_GCS_STREAM)
 # command_service.add_input_command(command_type=CommandType.STOP_GCS_STREAM)
 
 #######-####### RECORD #######-#######

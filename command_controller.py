@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
+from time import time
 from typing import Any, Literal, Union
-from constants import MAX_ZOOM, MIN_ZOOM, CommandType
+from constants import MAX_ZOOM, MIN_ZOOM, ZOOM_RATE, CommandType, ZoomStatus
 from validator import Validator
 
 
@@ -12,6 +13,9 @@ class CommandController:
         self.pi_streamer = pi_streamer
         self.validator = Validator()
         self.pi_streamer._set_command_controller(self)
+        self.zoom_status = ZoomStatus.STOP.value
+        self.current_zoom = MIN_ZOOM
+        self.last_zoom_time = 0
 
     def handle_command(self, command_type: str, command_value: str = "") -> None:
         """
@@ -22,11 +26,21 @@ class CommandController:
             self.pi_streamer.start_recording()
         elif command_type == CommandType.ZOOM.value:
             try:
-                zoom_factor = float(str(command_value))
-                self.set_zoom(zoom_factor)
+                zoom_status = str(command_value).lower().strip()
+                if zoom_status in [
+                    ZoomStatus.IN.value,
+                    ZoomStatus.OUT.value,
+                    ZoomStatus.STOP.value,
+                ]:
+                    self.zoom_status = zoom_status
+                    if zoom_status == ZoomStatus.STOP.value:
+                        self.last_zoom_time = 0
+                else:
+                    zoom_factor = float(zoom_status)
+                    self.set_zoom(zoom_factor)
             except (IndexError, ValueError):
                 raise Exception(
-                    "Invalid zoom command. Use 'zoom <factor>' where factor is a float."
+                    "Invalid zoom command. Use 'zoom <factor>' where factor is a float otherwise 'in' or 'out'."
                 )
         elif command_type == CommandType.STABILIZE.value:
             try:
@@ -127,10 +141,49 @@ class CommandController:
             zoom_factor = MAX_ZOOM
 
         full_res = self.pi_streamer.picam2.camera_properties["PixelArraySize"]
-        print(
-            f"original size {self.pi_streamer.original_size[0]} x {self.pi_streamer.original_size[1]}"
-        )
         size = [int(s / zoom_factor) for s in self.pi_streamer.original_size]
         offset = [(r - s) // 2 for r, s in zip(full_res, size)]
         self.pi_streamer.picam2.set_controls({"ScalerCrop": offset + size})
-        print(f"Zoom set to {zoom_factor}x")
+        print(f"Zoom set to {zoom_factor}x {offset + size}")
+
+    def do_continuous_zoom(self) -> None:
+        """
+        Controls a continuos "smooth" zoom in or out until min or max is reached or stop is reached
+        (whichever comes first).
+        """
+        if self.zoom_status == ZoomStatus.STOP.value:
+            return
+
+        current_time = int(time() * 1000)
+
+        # set our initial zoom reference point once
+        if not self.last_zoom_time:
+            self.last_zoom_time = current_time
+            return
+
+        elapsed_time = current_time - self.last_zoom_time
+        self.last_zoom_time = current_time
+        delta_zoom = float((ZOOM_RATE * elapsed_time) / 1000.0)
+
+        if self.zoom_status == ZoomStatus.IN.value:
+            self.current_zoom += delta_zoom
+        elif self.zoom_status == ZoomStatus.OUT.value:
+            self.current_zoom -= delta_zoom
+
+        # if we have reached zoom limits then stop zooming
+        stop_zoom = False
+        if self.current_zoom <= MIN_ZOOM:
+            self.current_zoom = MIN_ZOOM
+            stop_zoom = True
+        elif self.current_zoom >= MAX_ZOOM:
+            self.current_zoom = MAX_ZOOM
+            stop_zoom = True
+
+        if stop_zoom:
+            # reset the status and zoom time reference
+            self.zoom_status = ZoomStatus.STOP.value
+            self.last_zoom_time = 0
+
+        # we only care to two decimal places
+        self.current_zoom = round(self.current_zoom, 2)
+        self.set_zoom(self.current_zoom)
