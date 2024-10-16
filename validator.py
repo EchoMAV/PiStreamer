@@ -45,5 +45,13 @@ class Validator:
         except ValueError:
             return False
 
+    def validate_max_zoom(self, bitrate: float) -> bool:
+        try:
+            if 8.0 <= bitrate <= 16.0:
+                return True
+            return False
+        except ValueError:
+            return False
+
     def is_json_file(str, file_name: str) -> bool:
         return os.path.isfile(file_name) and file_name.lower().endswith(".json")

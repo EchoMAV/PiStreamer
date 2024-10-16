@@ -316,7 +316,7 @@ class PiStreamer2:
 
         # Init frame and stream
         fps = []
-        self.start_gcs_stream(ip=self.gcs_ip, port=self.gcs_port)  # type: ignore
+        self.start_gcs_stream(ip=str(self.gcs_ip), port=str(self.gcs_port))
         self.command_controller.set_zoom(MIN_ZOOM)
 
         # Main loop

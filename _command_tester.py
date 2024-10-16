@@ -12,9 +12,9 @@ command_service = CommandService()
 # command_service.add_input_command(command_type=CommandType.BITRATE, command_value="2010")
 
 #######-####### ZOOM #######-#######
-# command_service.add_input_command(command_type=CommandType.ZOOM, command_value="1.05")
-# command_service.add_input_command(command_type=CommandType.ZOOM, command_value="10")
-command_service.add_input_command(command_type=CommandType.ZOOM, command_value="in")
+# command_service.add_input_command(command_type=CommandType.ZOOM, command_value="1.0")
+# command_service.add_input_command(command_type=CommandType.MAX_ZOOM, command_value="8.0")
+# command_service.add_input_command(command_type=CommandType.ZOOM, command_value="in")
 # command_service.add_input_command(command_type=CommandType.ZOOM, command_value="out")
 # time.sleep(2)
 # command_service.add_input_command(command_type=CommandType.ZOOM, command_value="stop")

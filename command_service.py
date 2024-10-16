@@ -45,7 +45,7 @@ class CommandService:
         This is a way to write to the output FIFO queue.
         """
         try:
-            fifo_output_write = os.open(OUTPUT_FIFO_PATH, os.O_WRONLY)
+            fifo_output_write = os.open(OUTPUT_FIFO_PATH, os.O_RDWR | os.O_NONBLOCK)
             os.write(fifo_output_write, f"{data}\n".encode())
             os.close(fifo_output_write)
         except Exception as e:
