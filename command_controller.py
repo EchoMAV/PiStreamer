@@ -189,7 +189,7 @@ class CommandController:
         self.pi_streamer.picam2.set_controls({"ScalerCrop": new_crop})
 
         self.pi_streamer.command_service.add_output_data(
-            data=f"{OutputCommandType.ZOOM_FACTOR.value} {self.current_zoom}"
+            data=f"{OutputCommandType.ZOOM_LEVEL.value} {self.current_zoom}"
         )
 
         if self.pi_streamer.verbose:

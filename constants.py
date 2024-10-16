@@ -42,7 +42,7 @@ class OutputCommandType(Enum):
     Commands pistreamer writes to FIFO for other processes to read
     """
 
-    ZOOM_FACTOR = "zoomFactor"
+    ZOOM_LEVEL = "zoomLevel"  # defined at https://mavlink.io/en/messages/common.html#CAMERA_SETTINGS
 
 
 class ZoomStatus(Enum):
