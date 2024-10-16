@@ -2,8 +2,8 @@ from typing import Final
 from enum import Enum
 
 FRAMERATE: Final = 30
-MIN_ZOOM: Final = 1.0
-MAX_ZOOM: Final = 8.0
+MIN_ZOOM: Final = 1.05
+MAX_ZOOM: Final = 16.0
 DEFAULT_CONFIG_PATH: Final = "477-Pi4.json"
 STREAMING_FRAMESIZE: Final = "1280x720"  # 720p
 STILL_FRAMESIZE: Final = "3840x2160"  # 4K
@@ -16,8 +16,11 @@ class CommandType(Enum):
     STOP = "stop"
     KILL = "kill"
     BITRATE = "bitrate"
-    PORT = "port"
-    IP_ADDRESS = "ip_address"
+    GCS_IP = "gcs_ip"
+    GCS_PORT = "gcs_port"
+    GCS_HOST = (
+        "gsc_host"  # use this if you want to change ip address and port simultaneously
+    )
     RECORD = "record"
     STOP_RECORDING = "stop_recording"
     START_GCS_STREAM = "start_gcs_stream"

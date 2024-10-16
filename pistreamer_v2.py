@@ -18,6 +18,7 @@ import sys
 from constants import (
     DEFAULT_CONFIG_PATH,
     FRAMERATE,
+    MIN_ZOOM,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
     ZoomStatus,
@@ -37,6 +38,7 @@ class PiStreamer2:
         atak_ip: Optional[str] = None,
         atak_port: Optional[Union[str, int]] = None,
         config_file: str = "./477-Pi4.json",
+        verbose: bool = False,
     ) -> None:
         # utilities
         from command_controller import CommandController
@@ -44,6 +46,7 @@ class PiStreamer2:
         self.command_controller: CommandController = None  # type: ignore # this is set later in _set_command_controller
         self.command_service: CommandService = CommandService()
         self.pid = 0
+        self.verbose = verbose
         # video settings
         self.gcs_ip = gcs_ip
         self.gcs_port = gcs_port
@@ -175,13 +178,12 @@ class PiStreamer2:
                 self.ffmpeg_process_record.stdin.close()
             self.ffmpeg_process_record.wait()
 
-    def start_gcs_stream(self) -> None:
+    def start_gcs_stream(self, ip: str, port: str) -> None:
         if self.is_gcs_streaming:
             print("Already GCS streaming...")
             return
-        if not self.gcs_ip or not self.gcs_port:
-            print("GCS IP or port not set, cannot start GCS stream.")
-            return
+        self.gcs_ip = ip
+        self.gcs_port = port
         self.ffmpeg_command_gcs = get_ffmpeg_command_gcs(
             self.resolution,
             str(FRAMERATE),
@@ -312,12 +314,13 @@ class PiStreamer2:
         self.picam2.start()
         self.original_size = self.picam2.capture_metadata()["ScalerCrop"][2:]
 
-        # Init frame
+        # Init frame and stream
         fps = []
-
-        self.start_gcs_stream()
+        self.start_gcs_stream(ip=self.gcs_ip, port=self.gcs_port)  # type: ignore
+        self.command_controller.set_zoom(MIN_ZOOM)
 
         # Main loop
+        fps_value = 20
         try:
             i = 0
             startt = time.perf_counter()
@@ -333,11 +336,11 @@ class PiStreamer2:
                     self._read_and_process_commands()
 
                 # Calculate fps
-                if i == 10:
+                if self.verbose and i == fps_value:
                     elapsed_time = time.perf_counter() - startt
                     startt = time.perf_counter()
-                    fps.append(10 / elapsed_time)
-                    print(f"fps={10/elapsed_time} | ")
+                    fps.append(fps_value / elapsed_time)
+                    print(f"fps={fps_value/elapsed_time} | ")
                     i = 0
 
                 if self.stabilize:
@@ -374,17 +377,15 @@ class PiStreamer2:
                 if self.is_gcs_streaming:
                     self.ffmpeg_process_gcs.stdin.write(modified_frame_yuv_bytes)  # type: ignore
 
-                # Break the loop on 'q' key press
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    break
         finally:
             self.stop_and_clean_all()
-            print(f"\n\nAverage FPS = {sum(fps)/len(fps)}\n\n")
+            if self.verbose:
+                print(f"\n\nAverage FPS = {sum(fps)/len(fps)}\n\n")
 
 
 if __name__ == "__main__":
     # Argument parsing
-    parser = argparse.ArgumentParser(description="Video stabilization script.")
+    parser = argparse.ArgumentParser(description="PiStreamer for IMX477 Camera.")
     parser.add_argument("--stabilize", action="store_true", help="Whether to stabilize")
     parser.add_argument(
         "--resolution",
@@ -425,6 +426,9 @@ if __name__ == "__main__":
         default=DEFAULT_CONFIG_PATH,
         help="Relative file path for the IMX477 config json file",
     )
+    parser.add_argument(
+        "--verbose", action="store_true", help="Whether to print verbose FPS data"
+    )
     args = parser.parse_args()
     try:
         Validator(args)
@@ -440,6 +444,7 @@ if __name__ == "__main__":
         atak_ip=args.atak_ip,
         atak_port=args.atak_port,
         config_file=args.config_file,
+        verbose=args.verbose,
     )
     from command_controller import CommandController
 
