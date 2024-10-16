@@ -3,7 +3,6 @@
 from time import time
 from typing import Any, Literal, Union
 from constants import (
-    DEFAULT_MAX_ZOOM,
     MIN_ZOOM,
     ZOOM_RATE,
     CommandType,
@@ -22,7 +21,6 @@ class CommandController:
         self.pi_streamer._set_command_controller(self)
         self.zoom_status = ZoomStatus.STOP.value
         self.current_zoom = MIN_ZOOM
-        self.max_zoom = DEFAULT_MAX_ZOOM
         self.last_zoom_time = 0
 
     def handle_command(self, command_type: str, command_value: str = "") -> None:
@@ -56,7 +54,7 @@ class CommandController:
                 raise Exception(
                     f"Error: {max_zoom} is not a valid max_zoom. It must be between 8.0 and 16.0 inclusive."
                 )
-            self.max_zoom = max_zoom
+            self.pi_streamer.max_zoom = max_zoom
             self.set_zoom(MIN_ZOOM)  # reset the zoom back to the original
         elif command_type == CommandType.STABILIZE.value:
             try:
@@ -168,8 +166,8 @@ class CommandController:
         # Adjust the zoom by setting the crop rectangle
         if zoom_factor <= MIN_ZOOM:
             zoom_factor = MIN_ZOOM
-        elif zoom_factor >= self.max_zoom:
-            zoom_factor = self.max_zoom
+        elif zoom_factor >= self.pi_streamer.max_zoom:
+            zoom_factor = self.pi_streamer.max_zoom
 
         self.current_zoom = round(zoom_factor, 2)
         x, y, width, height = self.pi_streamer.picam2.camera_controls["ScalerCrop"][1]
@@ -224,8 +222,8 @@ class CommandController:
         if self.current_zoom <= MIN_ZOOM:
             self.current_zoom = MIN_ZOOM
             stop_zoom = True
-        elif self.current_zoom >= self.max_zoom:
-            self.current_zoom = self.max_zoom
+        elif self.current_zoom >= self.pi_streamer.max_zoom:
+            self.current_zoom = self.pi_streamer.max_zoom
             stop_zoom = True
 
         if stop_zoom:
