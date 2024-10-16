@@ -26,7 +26,7 @@ sudo apt install -y python3-numpy
 For normal (non-daemon) functionality run the script as below:
 
 ```
-python pistreamer_v2.py --gcs_ip={IP Address} --gcs_port={Port} --config_file="./477_Pi4.json"
+python pistreamer_v2.py --gcs_ip={IP Address} --gcs_port={Port} --config_file="./477-Pi4.json"
 ```
 Once the app is running you can send a variety of commands (from a different session) via a FIFO by executing `_command_tester.py`.
 
@@ -43,12 +43,14 @@ command_service.add_input_command(command_type=CommandType.RECORD.value) #start 
 command_service.add_input_command(command_type=CommandType.STOP_RECORDING) #stop recording to mp4
 command_service.add_input_command(command_type=CommandType.TAKE_PHOTO) #take single frame photo at 4K resolution.
 command_service.add_input_command(command_type=CommandType.START_GCS_STREAM) #start the GCS feed
+command_service.add_input_command(command_type=CommandType.STABILIZE, command_value="start") #start stabilization at current framerate
+command_service.add_input_command(command_type=CommandType.STABILIZE, command_value="stop") #stop stabilization at current framerate
 ```
 
 ## Daemon operation
 To run the streamer and all ffmpeg processes in the background run the following:
 ```
-python pistreamer_v2.py
+python pistreamer_v2.py &
 ```
 
 ### To kill the dameon
@@ -62,8 +64,7 @@ sudo kill -9 {PROCESS_ID_FOUND_ABOVE}
 ```
 
 ## Stabilization
-Pass the flag `--stabilization` to the command line to achieve software image stabilization through opencv. Due to the computation overhead of stabilization,
-resolution is limited to `640x360` in order to maintain a natural FPS rate.
+Pass the flag `--stabilization` to the command line to achieve software image stabilization through opencv. Due to the computational overhead of stabilization, a significant FPS penalty is incurred at all resolutions. See the spec table below to evaluate the best options.
 
 ## Recording and Still Photos
 The command_type `record` will simultaneously record the RTP upsink video frames to a ts video file. The resolution is the same as the GCS receives. `take_photo` will capture a 4K still frame and save to the filesystem. One thing to note about the behavior of picamer2 is that only a single configuration (i.e. resolution) can be active on the camera at a time. In order to switch configuration, the camera but me stopped and restarted with the new configuration.
@@ -74,7 +75,7 @@ A camera tuning json file is expected. Starting points for these files for the I
 ## IMX477 EchoLITE SBX Performance Specs
 Below are bench tested results of the IMX477 functioning at various resolutions and capture modes. Captured video and photo files are saved to the RPi filesystem whilst the streaming destination a RTP feed to a configuration IP and port.
 
-### Resolution & Aspect Ratio
+### Resolutions & Aspect Ratios
 | Resolution | Aspect Ratio | Notes         |
 |------------|--------------|---------------|
 | 640x360    | 16:9         | 360p LD       |
@@ -109,10 +110,18 @@ In order to take a photo at higher resolution than streaming resolution, there i
 | Not 3840x2160        | 3840x2160        | 1.15 sec         |
 | Not 4056x3040        | 4056x3040        | 1.42 sec         |
 
-
 ### Streaming + Saved Video + Saved Photo (2M bitrate)
 To save a photo at the same resolution as streaming and recording video, there is no
 significant impact to fps or streaming delay. However, if capturing a photo at a
 higher resolution than streaming+video, the photo delay time above will apply and the
 mp4 file up to that point will be saved and a new mp4 file will resume after the photo
 has been captured.
+
+### Stabilized Streaming Only (2M bitrate)
+Software stabilization algorithms require significant overhead which lowers the max FPS available.
+If this mode is desired 480p is recommended as a fair balance between image quality, FPS, and lag.
+| Resolution | Avg. Frame Rate | Aspect Ratio | Notes                                                                  |
+|------------|-----------------|--------------|------------------------------------------------------------------------|
+| 640x360    | 28              | 16:9         | 360p LD - Higher FPS but may result in more frequency image cropping   |
+| 854x480    | 16              | 16:9         | 480p SD - Lower FPS but may contribute to a perceived smoother display |
+| 1280x720   | 7               | 16:9         | 720p HD - Lowest FPS which introduces perceived lag. Not recommended.  |

@@ -17,6 +17,7 @@ from pathlib import Path
 import sys
 from constants import (
     DEFAULT_CONFIG_PATH,
+    DEFAULT_MAX_ZOOM,
     FRAMERATE,
     MIN_ZOOM,
     STREAMING_FRAMESIZE,
@@ -39,6 +40,7 @@ class PiStreamer2:
         atak_port: Optional[Union[str, int]] = None,
         config_file: str = "./477-Pi4.json",
         verbose: bool = False,
+        max_zoom: float = DEFAULT_MAX_ZOOM,
     ) -> None:
         # utilities
         from command_controller import CommandController
@@ -55,6 +57,7 @@ class PiStreamer2:
         self.streaming_bitrate = streaming_bitrate
         self.original_size = (0, 0)
         self.recording_start_time = 0
+        self.max_zoom = max_zoom
         # stabilize settings
         self.stabilize = stabilize
         self.prev_gray = None
@@ -316,7 +319,7 @@ class PiStreamer2:
 
         # Init frame and stream
         fps = []
-        self.start_gcs_stream(ip=self.gcs_ip, port=self.gcs_port)  # type: ignore
+        self.start_gcs_stream(ip=str(self.gcs_ip), port=str(self.gcs_port))
         self.command_controller.set_zoom(MIN_ZOOM)
 
         # Main loop
@@ -429,6 +432,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--verbose", action="store_true", help="Whether to print verbose FPS data"
     )
+    parser.add_argument(
+        "--max_zoom",
+        type=float,
+        default=DEFAULT_MAX_ZOOM,
+        help="Max Zoom rate of the EO",
+    )
     args = parser.parse_args()
     try:
         Validator(args)
@@ -445,6 +454,7 @@ if __name__ == "__main__":
         atak_port=args.atak_port,
         config_file=args.config_file,
         verbose=args.verbose,
+        max_zoom=args.max_zoom,
     )
     from command_controller import CommandController
 

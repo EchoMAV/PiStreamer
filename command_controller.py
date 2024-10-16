@@ -2,7 +2,13 @@
 
 from time import time
 from typing import Any, Literal, Union
-from constants import MAX_ZOOM, MIN_ZOOM, ZOOM_RATE, CommandType, ZoomStatus
+from constants import (
+    MIN_ZOOM,
+    ZOOM_RATE,
+    CommandType,
+    OutputCommandType,
+    ZoomStatus,
+)
 from validator import Validator
 
 
@@ -42,6 +48,14 @@ class CommandController:
                 raise Exception(
                     "Invalid zoom command. Use 'zoom <factor>' where factor is a float otherwise 'in' or 'out'."
                 )
+        elif command_type == CommandType.MAX_ZOOM.value:
+            max_zoom = float(command_value)
+            if not self.validator.validate_max_zoom(max_zoom):
+                raise Exception(
+                    f"Error: {max_zoom} is not a valid max_zoom. It must be between 8.0 and 16.0 inclusive."
+                )
+            self.pi_streamer.max_zoom = max_zoom
+            self.set_zoom(MIN_ZOOM)  # reset the zoom back to the original
         elif command_type == CommandType.STABILIZE.value:
             try:
                 stab_value = (
@@ -58,7 +72,8 @@ class CommandController:
             self._reset_host(command_value, "gcs")
         elif command_type == CommandType.START_GCS_STREAM.value:
             self.pi_streamer.start_gcs_stream(
-                ip=self.pi_streamer.gcs_ip, port=self.pi_streamer.gcs_port  # type: ignore
+                ip=str(self.pi_streamer.gcs_ip),
+                port=str(self.pi_streamer.gcs_port),
             )
         elif command_type == CommandType.STOP_GCS_STREAM.value:
             self.pi_streamer.stop_gcs_stream()
@@ -151,18 +166,32 @@ class CommandController:
         # Adjust the zoom by setting the crop rectangle
         if zoom_factor <= MIN_ZOOM:
             zoom_factor = MIN_ZOOM
-        elif zoom_factor >= MAX_ZOOM:
-            zoom_factor = MAX_ZOOM
+        elif zoom_factor >= self.pi_streamer.max_zoom:
+            zoom_factor = self.pi_streamer.max_zoom
 
         self.current_zoom = round(zoom_factor, 2)
+        x, y, width, height = self.pi_streamer.picam2.camera_controls["ScalerCrop"][1]
 
-        full_res = self.pi_streamer.picam2.camera_properties["PixelArraySize"]
-        size = [int(s / self.current_zoom) for s in self.pi_streamer.original_size]
-        offset = [(r - s) // 2 for r, s in zip(full_res, size)]
-        self.pi_streamer.picam2.set_controls({"ScalerCrop": offset + size})
+        # Calculate new width and height based on zoom factor
+        new_width = int(width / self.current_zoom)
+        new_height = int(new_width * 9 / 16)  # Maintain 16:9 aspect ratio
+
+        # Calculate new offsets to keep the zoom centered
+        x_offset = x + (width - new_width) // 2
+        y_offset = y + (height - new_height) // 2
+
+        # Apply the new crop to the second region
+        new_crop = (x_offset, y_offset, new_width, new_height)
+
+        # Set the updated ScalerCrop for the second stream
+        self.pi_streamer.picam2.set_controls({"ScalerCrop": new_crop})
+
+        self.pi_streamer.command_service.add_output_data(
+            data=f"{OutputCommandType.ZOOM_LEVEL.value} {self.current_zoom}"
+        )
 
         if self.pi_streamer.verbose:
-            print(f"Zoom set to {self.current_zoom}x {offset + size}")
+            print(f"Zoom set to {self.current_zoom}x {new_crop}")
 
     def do_continuous_zoom(self) -> None:
         """
@@ -193,8 +222,8 @@ class CommandController:
         if self.current_zoom <= MIN_ZOOM:
             self.current_zoom = MIN_ZOOM
             stop_zoom = True
-        elif self.current_zoom >= MAX_ZOOM:
-            self.current_zoom = MAX_ZOOM
+        elif self.current_zoom >= self.pi_streamer.max_zoom:
+            self.current_zoom = self.pi_streamer.max_zoom
             stop_zoom = True
 
         if stop_zoom:

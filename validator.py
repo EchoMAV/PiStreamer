@@ -20,6 +20,7 @@ class Validator:
         ret &= self.validate_port(str(self.args.atak_port))
         ret &= self.validate_bitrate(int(self.args.bitrate))
         ret &= self.is_json_file(str(self.args.config_file))
+        ret &= self.validate_max_zoom(float(self.args.max_zoom))
         return ret
 
     def validate_ip(self, ip: str) -> bool:
@@ -40,6 +41,14 @@ class Validator:
     def validate_bitrate(self, bitrate: int) -> bool:
         try:
             if 500 <= bitrate <= 10000:
+                return True
+            return False
+        except ValueError:
+            return False
+
+    def validate_max_zoom(self, max_zoom: float) -> bool:
+        try:
+            if 8.0 <= max_zoom <= 16.0:
                 return True
             return False
         except ValueError:
