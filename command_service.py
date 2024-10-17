@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from typing import Any, Tuple, List
-from constants import SOCKET_HOST, CMD_SOCKET_PORT, MAX_SOCKET_CONNECTIONS
+from constants import CMD_SOCKET_HOST, CMD_SOCKET_PORT, MAX_SOCKET_CONNECTIONS
 import socket
 import select
 
@@ -16,11 +16,11 @@ class CommandService:
         # Create the server socket
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server_socket.bind((SOCKET_HOST, CMD_SOCKET_PORT))
+        self.server_socket.bind((CMD_SOCKET_HOST, CMD_SOCKET_PORT))
         self.server_socket.listen(MAX_SOCKET_CONNECTIONS)
 
         print(
-            f"{__name__} listening for data on socket {SOCKET_HOST}:{CMD_SOCKET_PORT}"
+            f"{__name__} listening for data on socket {CMD_SOCKET_HOST}:{CMD_SOCKET_PORT}"
         )
         self.server_socket.setblocking(False)
 

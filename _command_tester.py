@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 from command_service import CommandService
-from constants import CMD_SOCKET_PORT, SOCKET_HOST, CommandType
+from constants import CMD_SOCKET_PORT, CMD_SOCKET_HOST, CommandType
 import time
 
 
 def _send_data(command_type: CommandType, command_value: str = "") -> None:
     data = f"{command_type.value} {command_value}".strip()
-    CommandService.send_data_out(data=data, host=SOCKET_HOST, port=CMD_SOCKET_PORT)
+    CommandService.send_data_out(data=data, host=CMD_SOCKET_HOST, port=CMD_SOCKET_PORT)
 
 
 # Modify the command_type and command_value as needed=
@@ -16,15 +16,19 @@ def _send_data(command_type: CommandType, command_value: str = "") -> None:
 # _send_data(command_type=CommandType.BITRATE, command_value="2010")
 
 #######-####### ZOOM #######-#######
-# _send_data(command_type=CommandType.ZOOM, command_value="5.0")
+_send_data(command_type=CommandType.ZOOM, command_value="5.0")
+time.sleep(2)
+# _send_data(command_type=CommandType.ZOOM, command_value="3.0")
+# time.sleep(2)
+# _send_data(command_type=CommandType.ZOOM, command_value="2.0")
 # _send_data(command_type=CommandType.MAX_ZOOM, command_value="8.0")
-_send_data(command_type=CommandType.ZOOM, command_value="in")
+# _send_data(command_type=CommandType.ZOOM, command_value="in")
 # _send_data(command_type=CommandType.ZOOM, command_value="out")
 # time.sleep(2)
 # _send_data(command_type=CommandType.ZOOM, command_value="stop")
 
 #######-####### PHOTO #######-#######
-# _send_data(command_type=CommandType.TAKE_PHOTO)
+_send_data(command_type=CommandType.TAKE_PHOTO)
 
 #######-####### ATAK #######-#######
 # _send_data(

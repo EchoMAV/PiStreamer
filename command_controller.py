@@ -9,8 +9,9 @@ from constants import (
     CommandType,
     OutputCommandType,
     ZoomStatus,
-    SOCKET_HOST,
+    CMD_SOCKET_HOST,
     OUTPUT_SOCKET_PORT,
+    OUTPUT_SOCKET_HOST,
 )
 from validator import Validator
 
@@ -188,7 +189,7 @@ class CommandController:
 
         CommandService.send_data_out(
             data=f"{OutputCommandType.ZOOM_LEVEL.value} {self.current_zoom}",
-            host=SOCKET_HOST,
+            host=OUTPUT_SOCKET_HOST,
             port=OUTPUT_SOCKET_PORT,
         )
 
