@@ -7,20 +7,20 @@ DEFAULT_MAX_ZOOM = 16.0  # this has the potential to change
 DEFAULT_CONFIG_PATH: Final = "477-Pi4.json"
 STREAMING_FRAMESIZE: Final = "1280x720"  # 720p
 STILL_FRAMESIZE: Final = "3840x2160"  # 4K
-INPUT_FIFO_PATH: Final = "/tmp/pistreamer"
-OUTPUT_FIFO_PATH: Final = "/tmp/pistreamer_output"
 ZOOM_RATE: Final = 1.65  # zoom rate per second
 MEDIA_FILES_DIRECTORY: Final = "MediaFiles"
+SOCKET_HOST = "localhost"
+CMD_SOCKET_PORT = 54321
+OUTPUT_SOCKET_PORT = 54322
+MAX_SOCKET_CONNECTIONS = 3
 
 
 class CommandType(Enum):
     """
-    Commands pistreamer reads from FIFO from other processes.
+    Commands pistreamer reads from a defined socket which is sent data by other processes.
     Some commands require a value to be passed with them and others are standalone.
     """
 
-    STOP = "stop"
-    KILL = "kill"
     BITRATE = "bitrate"  # `bitrate 2500` is an example`
     GCS_IP = "gcs_ip"  # `gcs_ip 192.168.1.50` is an example
     GCS_PORT = "gcs_port"  # `gcs_port 5601` is an example
@@ -39,7 +39,7 @@ class CommandType(Enum):
 
 class OutputCommandType(Enum):
     """
-    Commands pistreamer writes to FIFO for other processes to read
+    Commands pistreamer writes to an output socket for other processes to read
     """
 
     ZOOM_LEVEL = "zoomLevel"  # defined at https://mavlink.io/en/messages/common.html#CAMERA_SETTINGS
