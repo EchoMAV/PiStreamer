@@ -14,24 +14,23 @@ ZOOM_RATE: Final = 1.65  # zoom rate per second
 
 class CommandType(Enum):
     """
-    Commands pistreamer reads from FIFO from other processes
+    Commands pistreamer reads from FIFO from other processes.
+    Some commands require a value to be passed with them and others are standalone.
     """
 
     STOP = "stop"
     KILL = "kill"
-    BITRATE = "bitrate"
-    GCS_IP = "gcs_ip"
-    GCS_PORT = "gcs_port"
-    GCS_HOST = (
-        "gsc_host"  # use this if you want to change ip address and port simultaneously
-    )
-    RECORD = "record"
+    BITRATE = "bitrate"  # `bitrate 2500` is an example`
+    GCS_IP = "gcs_ip"  # `gcs_ip 192.168.1.50` is an example
+    GCS_PORT = "gcs_port"  # `gcs_port 5601` is an example
+    GCS_HOST = "gsc_host"  # `gsc_host 192.168.1.50:5601` is an example
+    RECORD = "record"  # record <Optional: file_name>` is an example
     STOP_RECORDING = "stop_recording"
     START_GCS_STREAM = "start_gcs_stream"
     STOP_GCS_STREAM = "stop_gcs_stream"
-    ZOOM = "zoom"
-    MAX_ZOOM = "max_zoom"
-    TAKE_PHOTO = "take_photo"
+    ZOOM = "zoom"  # `zoom 1.0`, `zoom in`, `zoom stop` are examples
+    MAX_ZOOM = "max_zoom"  # `max_zoom 8.0` is an example
+    TAKE_PHOTO = "take_photo"  # `take_photo <Optional: file_name>` is an example
     ATAK_HOST = "atak_host"  # `atak_host 192.168.1.1:5600` is an example
     STOP_ATAK = "stop_atak"
     STABILIZE = "stabilize"

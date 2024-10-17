@@ -2,7 +2,9 @@ from typing import List, Tuple
 from utils import get_timestamp
 
 
-def get_ffmpeg_command_record(resolution: Tuple[int, ...], framerate: str) -> List[str]:
+def get_ffmpeg_command_record(
+    resolution: Tuple[int, ...], framerate: str, file_name: str
+) -> List[str]:
     # Used for saving data to disk
     return [
         "ffmpeg",
@@ -30,7 +32,7 @@ def get_ffmpeg_command_record(resolution: Tuple[int, ...], framerate: str) -> Li
         "+faststart",  # Prepare the file for playback
         "-f",
         "mpegts",  # Save to mpegts
-        f"{get_timestamp()}.ts",  # Output file pattern
+        file_name,  # Output file pattern
     ]
 
 

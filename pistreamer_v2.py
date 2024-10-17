@@ -83,7 +83,7 @@ class PiStreamer2:
         self._close_ffmpeg_processes()
 
         self.ffmpeg_command_record = get_ffmpeg_command_record(
-            self.resolution, str(FRAMERATE)
+            self.resolution, str(FRAMERATE), f"{get_timestamp()}.ts"
         )
         print(f"streaming_bitrate {str(self.streaming_bitrate)}")
         if self.gcs_ip and self.gcs_port:
@@ -163,11 +163,18 @@ class PiStreamer2:
 
         return stabilized_frame
 
-    def start_recording(self) -> None:
+    def start_recording(self, file_name: str = "") -> None:
         if self.is_recording:
             print("Already recording...")
             return
+
         self.recording_start_time = int(time.time())
+
+        if file_name:
+            self.ffmpeg_command_record = get_ffmpeg_command_record(
+                self.resolution, str(FRAMERATE), file_name
+            )
+
         self.ffmpeg_process_record = subprocess.Popen(  # type: ignore
             self.ffmpeg_command_record, stdin=subprocess.PIPE
         )
@@ -233,12 +240,14 @@ class PiStreamer2:
                 self.ffmpeg_process_atak.stdin.close()
             self.ffmpeg_process_atak.wait()
 
-    def take_photo(self) -> None:
+    def take_photo(self, file_name: str = "") -> None:
         """
         Since photos are taken at higher resolution than streaming, the picam2 must stop and
         be reconfigured before the photo can be taken. Once taken, the streaming config is reapplied.
         If the photo resolution is the same as the streaming resolution, the picam2 does not need to
         change resolution.
+
+        Also note that the command sender may optionally send the desired file name for the photo.
         """
         if not self.is_gcs_streaming:
             return
@@ -251,7 +260,9 @@ class PiStreamer2:
             self.picam2.configure(self.photo_config)
             self.picam2.start()
 
-        self.picam2.capture_file(f"{get_timestamp()}.jpg")
+        if not file_name:
+            file_name = f"{get_timestamp()}.jpg"
+        self.picam2.capture_file(file_name)
 
         if not is_same_resolution:
             self.picam2.stop()

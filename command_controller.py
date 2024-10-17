@@ -28,8 +28,11 @@ class CommandController:
         Attempts to handle the GCS commands for PiStreamer. If an exception occurs it is
         raised so PiStreamer can update the db row with the error.
         """
-        if command_type == CommandType.RECORD.value:
-            self.pi_streamer.start_recording()
+        # Higher priority commands should come first in if/elif/else for minor performance improvements
+        if command_type == CommandType.TAKE_PHOTO.value:
+            self.pi_streamer.take_photo(file_name=command_value)
+        elif command_type == CommandType.RECORD.value:
+            self.pi_streamer.start_recording(file_name=command_value)
         elif command_type == CommandType.ZOOM.value:
             try:
                 zoom_status = str(command_value).lower().strip()
@@ -64,8 +67,6 @@ class CommandController:
                 self.pi_streamer.stabilize = stab_value
             except Exception:
                 raise Exception("Invalid stabilization command.")
-        elif command_type == CommandType.TAKE_PHOTO.value:
-            self.pi_streamer.take_photo()
         elif command_type == CommandType.STOP_RECORDING.value:
             self.pi_streamer.stop_recording()
         elif command_type == CommandType.GCS_HOST.value:
