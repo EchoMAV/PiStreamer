@@ -12,10 +12,14 @@ is returned back to the mavlink service with a different FIFO queue.
 
 class CommandService:
     def __init__(self):
-        if not os.path.exists(INPUT_FIFO_PATH):
-            os.mkfifo(INPUT_FIFO_PATH)
-        if not os.path.exists(OUTPUT_FIFO_PATH):
-            os.mkfifo(OUTPUT_FIFO_PATH)
+        # (re)create FIFOs so lingering commands are cleared
+        if os.path.exists(INPUT_FIFO_PATH):
+            os.remove(INPUT_FIFO_PATH)
+        os.mkfifo(INPUT_FIFO_PATH)
+
+        if os.path.exists(OUTPUT_FIFO_PATH):
+            os.remove(OUTPUT_FIFO_PATH)
+        os.mkfifo(OUTPUT_FIFO_PATH)
 
         # Open FIFO for reading
         self.fifo_input_read = os.open(INPUT_FIFO_PATH, os.O_RDONLY | os.O_NONBLOCK)
