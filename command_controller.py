@@ -2,12 +2,15 @@
 
 from time import time
 from typing import Any, Literal, Union
+from command_service import CommandService
 from constants import (
     MIN_ZOOM,
     ZOOM_RATE,
     CommandType,
     OutputCommandType,
     ZoomStatus,
+    SOCKET_HOST,
+    OUTPUT_SOCKET_PORT,
 )
 from validator import Validator
 
@@ -120,10 +123,6 @@ class CommandController:
                 raise Exception(
                     "Invalid ip command. Use 'ip <value>' where value is a valid ip address."
                 )
-        elif command_type == CommandType.STOP.value:
-            self.pi_streamer.stop_and_clean_all()
-        elif command_type == CommandType.KILL.value:
-            self.pi_streamer.stop_and_clean_all()
         else:
             raise Exception(f"Unknown command_type: `{command_type}`")
 
@@ -187,8 +186,10 @@ class CommandController:
         # Set the updated ScalerCrop for the second stream
         self.pi_streamer.picam2.set_controls({"ScalerCrop": new_crop})
 
-        self.pi_streamer.command_service.add_output_data(
-            data=f"{OutputCommandType.ZOOM_LEVEL.value} {self.current_zoom}"
+        CommandService.send_data_out(
+            data=f"{OutputCommandType.ZOOM_LEVEL.value} {self.current_zoom}",
+            host=SOCKET_HOST,
+            port=OUTPUT_SOCKET_PORT,
         )
 
         if self.pi_streamer.verbose:

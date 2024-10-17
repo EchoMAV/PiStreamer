@@ -1,72 +1,91 @@
 #!/usr/bin/env python3
 
-from typing import List, Optional, Tuple
-from constants import INPUT_FIFO_PATH, OUTPUT_FIFO_PATH, CommandType
-import os
+from typing import Any, Tuple, List
+from constants import SOCKET_HOST, CMD_SOCKET_PORT, MAX_SOCKET_CONNECTIONS
+import socket
+import select
 
 """
-Commands are communicated to the pistreamer app via a dedicated FIFO queue and status
-is returned back to the mavlink service with a different FIFO queue.
+Commands are communicated to the pistreamer app via a dedicated socket host:port and
+status and other data is returned back to the mavlink service at a different port.
 """
 
 
 class CommandService:
     def __init__(self):
-        # (re)create FIFOs so lingering commands are cleared
-        if os.path.exists(INPUT_FIFO_PATH):
-            os.remove(INPUT_FIFO_PATH)
-        os.mkfifo(INPUT_FIFO_PATH)
+        # Create the server socket
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server_socket.bind((SOCKET_HOST, CMD_SOCKET_PORT))
+        self.server_socket.listen(MAX_SOCKET_CONNECTIONS)
 
-        if os.path.exists(OUTPUT_FIFO_PATH):
-            os.remove(OUTPUT_FIFO_PATH)
-        os.mkfifo(OUTPUT_FIFO_PATH)
+        print(
+            f"{__name__} listening for data on socket {SOCKET_HOST}:{CMD_SOCKET_PORT}"
+        )
+        self.server_socket.setblocking(False)
 
-        # Open FIFO for reading
-        self.fifo_input_read = os.open(INPUT_FIFO_PATH, os.O_RDONLY | os.O_NONBLOCK)
+        # Accept a single client connection (blocking until a connection is made)
+        self.client_socket, self.client_address = None, None
 
-    def __del__(self):
-        if self.fifo_input_read:
-            os.close(self.fifo_input_read)
+    def _accept_client(self):
+        try:
+            ready_to_read, _, _ = select.select(
+                [self.server_socket], [], [], 0
+            )  # don't wait
+            if ready_to_read:
+                self.client_socket, self.client_address = self.server_socket.accept()
+                self.client_socket.setblocking(
+                    False
+                )  # Set the client socket to non-blocking mode
+                print(f"Accepted connection from {self.client_address}")
+        except BlockingIOError:
+            # No incoming connections, handle this case as needed
+            pass
 
-    def add_input_command(
-        self, command_type: CommandType, command_value: Optional[str] = ""
-    ) -> None:
+    def _read_socket(self) -> str:
+        self._accept_client()
+        if self.client_socket:
+            ready_to_read, _, _ = select.select(
+                [self.client_socket], [], [], 0
+            )  # don't wait
+            if ready_to_read:
+                try:
+                    # Try to receive data from the client
+                    data = self.client_socket.recv(1024)
+                    if data:
+                        return data.decode()
+                except Exception as e:
+                    if e:
+                        print(e)
+        return ""
+
+    @staticmethod
+    def send_data_out(data: str, host: str, port: int) -> None:
         """
-        This is a way to write to the input FIFO queue.
+        Used to send data out over another host:port client socket connection.
         """
         try:
-            fifo_input_write = os.open(INPUT_FIFO_PATH, os.O_WRONLY)
-            os.write(
-                fifo_input_write, f"{command_type.value} {command_value}\n".encode()
-            )
-            os.close(fifo_input_write)
+            _data = data.strip().encode()
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect((host, port))
+            client_socket.sendall(_data)
         except Exception as e:
-            print(f"Error writing to input FIFO: {e}")
-            raise e
-
-    def add_output_data(self, data: str) -> None:
-        """
-        This is a way to write to the output FIFO queue.
-        """
-        try:
-            fifo_output_write = os.open(OUTPUT_FIFO_PATH, os.O_RDWR | os.O_NONBLOCK)
-            os.write(fifo_output_write, f"{data}\n".encode())
-            os.close(fifo_output_write)
-        except Exception as e:
-            print(f"Error writing to output FIFO: {e}")
+            print(f"{host}:{port} {e}")
+        finally:
+            client_socket.close()
 
     def get_pending_commands(self) -> List[Tuple[str, str]]:
         """
-        Returns the a list of command that has not been read yet from the FIFO.
+        Returns the a list of command that has not been read yet from the socket.
         The first param in the tuple is the command type followed by the command value.
         If no commands are ready, then an empty list is returned.
         """
         commands = []
         try:
-            # Try reading from the FIFO
-            data = os.read(self.fifo_input_read, 1024)  # Read up to 1024 bytes
+            # Try reading from the socket
+            data = self._read_socket()
             if data:
-                decoded_data = str(data.decode()).split("\n")
+                decoded_data = str(data).split("\n")
                 decoded_data = [str(item).strip() for item in decoded_data if item]
                 print(f"Received {len(decoded_data)} total command(s): {decoded_data}")
                 for command in decoded_data:

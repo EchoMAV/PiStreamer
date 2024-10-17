@@ -1,10 +1,11 @@
 # PiStreamer
-This is a Python application using the picamera2 library to open a camera on an RPi and perform a series of commands:
+This is a Python application using the picamera2 library to open a camera on an RPi and perform a series of commands. A full list of support commands can be found at `CommandType`. Here are some common examples:
 * Streaming to UDP GCS destination
 * Streaming to ATAK
 * Capturing still photos
 * Recording video
 * Changing the digital zoom of the frame
+* Stabilizing the stream
 
 ## Dependencies
 Tested on RPi4 CM running Raspian:
@@ -28,23 +29,22 @@ For normal (non-daemon) functionality run the script as below:
 ```
 python pistreamer_v2.py --gcs_ip={IP Address} --gcs_port={Port} --config_file="./477-Pi4.json"
 ```
-Once the app is running you can send a variety of commands (from a different session) via a FIFO by executing `_command_tester.py`.
+Once the app is running you can send a variety of commands (from a different session) by sending data over a socket defined by `SOCKET_HOST:CMD_SOCKET_PORT`. `_command_tester.py` has several examples you can uncomment and/or modify.
 
 ## Commands
-You can run `python _command_tester.py` to writes to the FIFO which the pistreamer will ingest. Below are some examples:
+You can run `python _command_tester.py` to send data over the cmd socket which the pistreamer will ingest. Below are some examples:
 ```
-command_service = CommandService()
-command_service.add_input_command(command_type=CommandType.ZOOM.value, command_value="1.0") #zoom out fully
-command_service.add_input_command(command_type=CommandType.ZOOM.value, command_value="8.0") #zoom in fully
-command_service.add_input_command(command_type=CommandType.BITRATE.value, command_value="2000") #set bitrate to 2000 kpbs
-command_service.add_input_command(command_type=CommandType.IP_ADDRESS.value, command_value="192.168.1.85") #change endpoint ip to 192.168.1.85
-command_service.add_input_command(command_type=CommandType.PORT.value, command_value="5601") #change endpoint port to 5601
-command_service.add_input_command(command_type=CommandType.RECORD.value) #start recording to mp4
-command_service.add_input_command(command_type=CommandType.STOP_RECORDING) #stop recording to mp4
-command_service.add_input_command(command_type=CommandType.TAKE_PHOTO) #take single frame photo at 4K resolution.
-command_service.add_input_command(command_type=CommandType.START_GCS_STREAM) #start the GCS feed
-command_service.add_input_command(command_type=CommandType.STABILIZE, command_value="start") #start stabilization at current framerate
-command_service.add_input_command(command_type=CommandType.STABILIZE, command_value="stop") #stop stabilization at current framerate
+_send_data(command_type=CommandType.ZOOM.value, command_value="1.0") #zoom out fully
+_send_data(command_type=CommandType.ZOOM.value, command_value="8.0") #zoom in fully
+_send_data(command_type=CommandType.BITRATE.value, command_value="2000") #set bitrate to 2000 kpbs
+_send_data(command_type=CommandType.IP_ADDRESS.value, command_value="192.168.1.85") #change endpoint ip to 192.168.1.85
+_send_data(command_type=CommandType.PORT.value, command_value="5601") #change endpoint port to 5601
+_send_data(command_type=CommandType.RECORD.value) #start recording to mp4
+_send_data(command_type=CommandType.STOP_RECORDING) #stop recording to mp4
+_send_data(command_type=CommandType.TAKE_PHOTO) #take single frame photo at 4K resolution.
+_send_data(command_type=CommandType.START_GCS_STREAM) #start the GCS feed
+_send_data(command_type=CommandType.STABILIZE, command_value="start") #start stabilization at current framerate
+_send_data(command_type=CommandType.STABILIZE, command_value="stop") #stop stabilization at current framerate
 ```
 
 ## Daemon operation
