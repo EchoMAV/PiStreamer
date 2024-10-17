@@ -7,6 +7,8 @@ from ffmpeg_configs import (
     get_ffmpeg_command_record,
     get_ffmpeg_command_gcs,
 )
+import os
+from pathlib import Path
 from picamera2 import Picamera2
 import cv2
 import numpy as np
@@ -19,6 +21,7 @@ from constants import (
     DEFAULT_CONFIG_PATH,
     DEFAULT_MAX_ZOOM,
     FRAMERATE,
+    MEDIA_FILES_DIRECTORY,
     MIN_ZOOM,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
@@ -79,11 +82,17 @@ class PiStreamer2:
         self.ffmpeg_process_gcs = None
         self.ffmpeg_process_atak = None
 
+        # Ensure the media files directory exists
+        media_directory = Path(f"./{MEDIA_FILES_DIRECTORY}")
+        os.makedirs(media_directory, exist_ok=True)
+
     def _init_ffmpeg_processes(self) -> None:
         self._close_ffmpeg_processes()
 
         self.ffmpeg_command_record = get_ffmpeg_command_record(
-            self.resolution, str(FRAMERATE), f"{get_timestamp()}.ts"
+            self.resolution,
+            str(FRAMERATE),
+            f"./{MEDIA_FILES_DIRECTORY}/{get_timestamp()}.ts",
         )
         print(f"streaming_bitrate {str(self.streaming_bitrate)}")
         if self.gcs_ip and self.gcs_port:
@@ -261,7 +270,7 @@ class PiStreamer2:
             self.picam2.start()
 
         if not file_name:
-            file_name = f"{get_timestamp()}.jpg"
+            file_name = f"./{MEDIA_FILES_DIRECTORY}/{get_timestamp()}.jpg"
         self.picam2.capture_file(file_name)
 
         if not is_same_resolution:

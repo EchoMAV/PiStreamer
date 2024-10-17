@@ -10,6 +10,7 @@ STILL_FRAMESIZE: Final = "3840x2160"  # 4K
 INPUT_FIFO_PATH: Final = "/tmp/pistreamer"
 OUTPUT_FIFO_PATH: Final = "/tmp/pistreamer_output"
 ZOOM_RATE: Final = 1.65  # zoom rate per second
+MEDIA_FILES_DIRECTORY: Final = "MediaFiles"
 
 
 class CommandType(Enum):
