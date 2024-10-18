@@ -71,9 +71,6 @@ class PiStreamer2:
         self.streaming_config = self.picam2.create_video_configuration(
             main={"size": self.resolution}
         )
-        # self.photo_config = self.picam2.create_preview_configuration(
-        #     main={"size": tuple(map(int, STILL_FRAMESIZE.split("x")))}
-        # )
         self.photo_config = self.picam2.create_still_configuration(
             main={"size": tuple(map(int, STILL_FRAMESIZE.split("x")))}
         )
