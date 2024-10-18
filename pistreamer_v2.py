@@ -68,10 +68,13 @@ class PiStreamer2:
         self.resolution = tuple(map(int, resolution.split("x")))
         tuning = Picamera2.load_tuning_file(Path(config_file).resolve())
         self.picam2 = Picamera2(tuning=tuning)
-        self.streaming_config = self.picam2.create_preview_configuration(
+        self.streaming_config = self.picam2.create_video_configuration(
             main={"size": self.resolution}
         )
-        self.photo_config = self.picam2.create_preview_configuration(
+        # self.photo_config = self.picam2.create_preview_configuration(
+        #     main={"size": tuple(map(int, STILL_FRAMESIZE.split("x")))}
+        # )
+        self.photo_config = self.picam2.create_still_configuration(
             main={"size": tuple(map(int, STILL_FRAMESIZE.split("x")))}
         )
         # ffmpeg processes
@@ -254,19 +257,23 @@ class PiStreamer2:
         Since photos are taken at higher resolution than streaming, the picam2 must stop and
         be reconfigured before the photo can be taken. Once taken, the streaming config is reapplied.
         If the photo resolution is the same as the streaming resolution, the picam2 does not need to
-        change resolution.
+        change resolution. The photo will also be capture at the same zoom level as set on the GCS.
 
         Also note that the command sender may optionally send the desired file name for the photo.
         """
         if not self.is_gcs_streaming:
             return
+
         is_same_resolution = (
             tuple(map(int, STILL_FRAMESIZE.split("x"))) == self.resolution
         )
 
+        _original_zoom = self.command_controller.current_zoom
+
         if not is_same_resolution:
             self.picam2.stop()
             self.picam2.configure(self.photo_config)
+            self.command_controller.set_zoom(_original_zoom)
             self.picam2.start()
 
         if not file_name:
@@ -276,6 +283,7 @@ class PiStreamer2:
         if not is_same_resolution:
             self.picam2.stop()
             self.picam2.configure(self.streaming_config)
+            self.command_controller.set_zoom(_original_zoom)
             self.picam2.start()
 
     def _format_duration(self, seconds: int) -> str:
