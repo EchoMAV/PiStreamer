@@ -21,6 +21,35 @@ sudo apt install -y python3-picamera2
 sudo apt install -y ffmpeg
 sudo apt install -y python3-opencv
 sudo apt install -y python3-numpy
+sudo pip3 install opencv-contrib-python --break-system-packages
+
+or
+sudo apt-get install -y build-essential cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+sudo apt-get install -y libv4l-dev v4l-utils libxvidcore-dev libx264-dev libgtk-3-dev libatlas-base-dev gfortran
+git clone https://github.com/opencv/opencv.git
+git clone https://github.com/opencv/opencv_contrib.git
+cd opencv
+sudo mkdir build
+cd build
+sudo cmake -D CMAKE_BUILD_TYPE=RELEASE \
+      -D CMAKE_INSTALL_PREFIX=/usr/local \
+      -D OPENCV_EXTRA_MODULES_PATH=~/opencv_contrib-4.x/modules \
+      -D WITH_TBB=ON \
+      -D WITH_OPENMP=ON \
+      -D WITH_V4L=ON \
+      -D WITH_FFMPEG=ON \
+      -D WITH_GSTREAMER=ON \
+      -D BUILD_TESTS=OFF \
+      -D BUILD_PERF_TESTS=OFF \
+      -D INSTALL_C_EXAMPLES=OFF \
+      -D INSTALL_PYTHON_EXAMPLES=OFF \
+      -D BUILD_EXAMPLES=OFF ..
+
+sudo cmake -D CMAKE_BUILD_TYPE=RELEASE \
+      -D CMAKE_INSTALL_PREFIX=/usr/local \
+      -D OPENCV_EXTRA_MODULES_PATH=~/opencv_contrib-4.x/modules \
+      -D WITH_V4L=ON \
+      -D BUILD_opencv_tracking=ON ..
 ```
 
 ## Non-Daemon operation

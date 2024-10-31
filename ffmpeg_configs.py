@@ -1,5 +1,4 @@
 from typing import List, Tuple
-from utils import get_timestamp
 
 
 def get_ffmpeg_command_record(

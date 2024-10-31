@@ -14,6 +14,8 @@ OUTPUT_SOCKET_HOST = "localhost"
 CMD_SOCKET_PORT = 54321
 OUTPUT_SOCKET_PORT = 54322
 MAX_SOCKET_CONNECTIONS = 3
+INIT_BBOX_COLOR = (128, 128, 128)  # Grey color in BGR
+ACTIVE_BBOX_COLOR = (0, 0, 255)  # Red color in BGR
 
 
 class CommandType(Enum):
@@ -36,6 +38,8 @@ class CommandType(Enum):
     ATAK_HOST = "atak_host"  # `atak_host 192.168.1.1:5600` is an example
     STOP_ATAK = "stop_atak"
     STABILIZE = "stabilize"
+    INIT_TRACKING_POI = "init_tracking_poi"  # `init_tracking_poi x,y` is an example
+    STOP_TRACKING = "stop_tracking"
 
 
 class OutputCommandType(Enum):
@@ -50,3 +54,10 @@ class ZoomStatus(Enum):
     STOP = "stop"
     IN = "in"
     OUT = "out"
+
+
+class TrackStatus(Enum):
+    STOP = "stop"
+    ACTIVE = "active"
+    INIT = "init"
+    NONE = "none"

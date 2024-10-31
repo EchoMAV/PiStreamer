@@ -16,8 +16,8 @@ def _send_data(command_type: CommandType, command_value: str = "") -> None:
 # _send_data(command_type=CommandType.BITRATE, command_value="2010")
 
 #######-####### ZOOM #######-#######
-_send_data(command_type=CommandType.ZOOM, command_value="4.0")
-time.sleep(2)
+# _send_data(command_type=CommandType.ZOOM, command_value="4.0")
+# time.sleep(2)
 # _send_data(command_type=CommandType.ZOOM, command_value="3.0")
 # time.sleep(2)
 # _send_data(command_type=CommandType.ZOOM, command_value="2.0")
@@ -28,7 +28,7 @@ time.sleep(2)
 # _send_data(command_type=CommandType.ZOOM, command_value="stop")
 
 #######-####### PHOTO #######-#######
-_send_data(command_type=CommandType.TAKE_PHOTO)
+# _send_data(command_type=CommandType.TAKE_PHOTO)
 
 #######-####### ATAK #######-#######
 # _send_data(
@@ -52,3 +52,6 @@ _send_data(command_type=CommandType.TAKE_PHOTO)
 # _send_data(
 #     command_type=CommandType.STABILIZE, command_value="stop"
 # )
+
+#######-####### TRACKING #######-#######
+_send_data(command_type=CommandType.INIT_TRACKING_POI, command_value="560,290")
