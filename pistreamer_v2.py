@@ -21,13 +21,16 @@ from constants import (
     DEFAULT_CONFIG_PATH,
     DEFAULT_MAX_ZOOM,
     FRAMERATE,
+    INIT_BBOX_COLOR,
     MEDIA_FILES_DIRECTORY,
     MIN_ZOOM,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
+    TrackStatus,
     ZoomStatus,
 )
-from utils import get_timestamp
+from object_tracker import ObjectTracker
+from cam_utils import get_timestamp
 from validator import Validator
 
 
@@ -81,6 +84,9 @@ class PiStreamer2:
         self.ffmpeg_process_record = None
         self.ffmpeg_process_gcs = None
         self.ffmpeg_process_atak = None
+        # tracking
+        self.tracker = ObjectTracker()
+        self.track_status = TrackStatus.NONE.value
 
         # Ensure the media files directory exists
         media_directory = Path(f"./{MEDIA_FILES_DIRECTORY}")
@@ -370,6 +376,19 @@ class PiStreamer2:
                     fps.append(fps_value / elapsed_time)
                     print(f"fps={fps_value/elapsed_time} | ")
                     i = 0
+
+                if self.track_status == TrackStatus.INIT.value:
+                    ret = self.tracker._init_bounding_box(frame)
+                    if ret:
+                        frame = self.tracker.draw_bounding_box(frame, INIT_BBOX_COLOR)
+                        self.track_status = TrackStatus.ACTIVE.value
+
+                if self.track_status == TrackStatus.ACTIVE.value:
+                    frame = self.tracker.draw_bounding_box(frame, INIT_BBOX_COLOR)
+                    ret, frame = self.tracker.track_object(frame)
+                    if not ret:
+                        print("Tracking has been lost")
+                        self.track_status = TrackStatus.STOP.value
 
                 if self.stabilize:
                     if self.prev_gray is None:

@@ -12,6 +12,7 @@ from constants import (
     CMD_SOCKET_HOST,
     OUTPUT_SOCKET_PORT,
     OUTPUT_SOCKET_HOST,
+    TrackStatus,
 )
 from validator import Validator
 
@@ -63,6 +64,12 @@ class CommandController:
                 )
             self.pi_streamer.max_zoom = max_zoom
             self.set_zoom(MIN_ZOOM)  # reset the zoom back to the original
+        elif command_type == CommandType.INIT_TRACKING_POI.value:
+            x_center, y_center = command_value.split(",")
+            self.pi_streamer.tracker._init_tracking_poi(
+                x_center=int(x_center), y_center=int(y_center)
+            )
+            self.pi_streamer.track_status = TrackStatus.INIT.value
         elif command_type == CommandType.STABILIZE.value:
             try:
                 stab_value = (
