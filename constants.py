@@ -24,19 +24,24 @@ class CommandType(Enum):
     Some commands require a value to be passed with them and others are standalone.
     """
 
+    ### vvvv Setting the IP, PORT, or HOST will start it and set it to preferred and stop the ATAK stream
+    QGC_IP = "qgc_ip"  # `qgc_ip 192.168.1.50` is an example
+    QGC_PORT = "qgc_port"  # `qgc_port 5601` is an example
+    QGC_HOST = "gsc_host"  # `gsc_host 192.168.1.50:5601` is an example
+    START_QGC_STREAM = "start_qgc_stream"  # uses the ip/port set by the above commands
+    STOP_QGC_STREAM = "stop_qgc_stream"
+    ### ^^^^
+    ### vvvv Setting the ATAK host will start it and set it to preferred and stop the QGC stream
+    ATAK_HOST = "atak_host"  # `atak_host 224.1.1.1:5002` is an example
+    START_ATAK_STREAM = "start_atak_stream"  # uses the ip/port set by the host
+    STOP_ATAK_STREAM = "stop_atak_stream"
+    ### ^^^^
     BITRATE = "bitrate"  # `bitrate 2500` is an example`
-    GCS_IP = "gcs_ip"  # `gcs_ip 192.168.1.50` is an example
-    GCS_PORT = "gcs_port"  # `gcs_port 5601` is an example
-    GCS_HOST = "gsc_host"  # `gsc_host 192.168.1.50:5601` is an example
     RECORD = "record"  # record <Optional: file_name>` is an example
     STOP_RECORDING = "stop_recording"
-    START_GCS_STREAM = "start_gcs_stream"
-    STOP_GCS_STREAM = "stop_gcs_stream"
     ZOOM = "zoom"  # `zoom 1.0`, `zoom in`, `zoom stop` are examples
     MAX_ZOOM = "max_zoom"  # `max_zoom 8.0` is an example
     TAKE_PHOTO = "take_photo"  # `take_photo <Optional: file_name>` is an example
-    ATAK_HOST = "atak_host"  # `atak_host 192.168.1.1:5600` is an example
-    STOP_ATAK = "stop_atak"
     STABILIZE = "stabilize"
     INIT_TRACKING_POI = "init_tracking_poi"  # `init_tracking_poi x,y` is an example
     STOP_TRACKING = "stop_tracking"

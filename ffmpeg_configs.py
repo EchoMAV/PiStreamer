@@ -35,14 +35,16 @@ def get_ffmpeg_command_record(
     ]
 
 
-def get_ffmpeg_command_gcs(
+def get_ffmpeg_command_qgc(
     resolution: Tuple[int, ...],
     framerate: str,
-    gcs_ip: str,
-    gcs_port: str,
+    qgc_ip: str,
+    qgc_port: str,
     streaming_bitrate: str,
 ) -> List[str]:
-    # Used for streaming video to GCS
+    """
+    Used for streaming video to QGroundControl as the GCS
+    """
     return [
         "ffmpeg",
         "-y",  # Overwrite output files without asking
@@ -68,7 +70,7 @@ def get_ffmpeg_command_gcs(
         "nobuffer",  # No buffer for RTP
         "-f",
         "rtp",  # Output format for RTP
-        f"rtp://{gcs_ip}:{gcs_port}",
+        f"rtp://{qgc_ip}:{qgc_port}",
     ]
 
 
@@ -79,7 +81,9 @@ def get_ffmpeg_command_atak(
     atak_port: str,
     streaming_bitrate: str,
 ) -> List[str]:
-    # Used for streaming video to ATAK
+    """
+    Used for streaming video to ATAK as the GCS
+    """
     return [
         "ffmpeg",
         "-y",  # Overwrite output files without asking

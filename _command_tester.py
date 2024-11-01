@@ -35,12 +35,12 @@ def _send_data(command_type: CommandType, command_value: str = "") -> None:
 #     command_type=CommandType.ATAK_HOST, command_value="224.1.1.1:5002"
 # )
 
-#######-####### GCS #######-#######
-# _send_data(command_type=CommandType.GCS_IP, command_value="192.168.1.124")
-# _send_data(command_type=CommandType.GCS_PORT, command_value="5600")
-# _send_data(command_type=CommandType.GCS_HOST, command_value="192.168.1.124:5600")
-# _send_data(command_type=CommandType.START_GCS_STREAM)
-# _send_data(command_type=CommandType.STOP_GCS_STREAM)
+#######-####### QGC #######-#######
+# _send_data(command_type=CommandType.QGC_IP, command_value="192.168.1.124")
+# _send_data(command_type=CommandType.QGC_PORT, command_value="5600")
+# _send_data(command_type=CommandType.QGC_HOST, command_value="192.168.1.124:5600")
+# _send_data(command_type=CommandType.START_QGC_STREAM)
+# _send_data(command_type=CommandType.STOP_QGC_STREAM)
 
 #######-####### RECORD #######-#######
 # _send_data(command_type=CommandType.RECORD)

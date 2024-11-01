@@ -22,6 +22,8 @@ sudo apt install -y ffmpeg
 sudo apt install -y python3-opencv
 sudo apt install -y python3-numpy
 ```
+## GCS Selection
+pistreamer_v2 has the option to stream to QGroundControl as the GCS or ATAK. Generally speaking ATAK requires a MPEG-TS video format whereas GCS is a RDP stream. Since a pilot will only need one active GCS at a time, either `ffmpeg_command_atak` or `ffmpeg_command_qgc` will be actively streaming at a time.
 
 ## Non-Daemon operation
 For normal (non-daemon) functionality run the script as below:
@@ -47,21 +49,8 @@ _send_data(command_type=CommandType.STABILIZE, command_value="start") #start sta
 _send_data(command_type=CommandType.STABILIZE, command_value="stop") #stop stabilization at current framerate
 ```
 
-## Daemon operation
-To run the streamer and all ffmpeg processes in the background run the following:
-```
-python pistreamer_v2.py &
-```
-
-### To kill the dameon
-```
-echo "kill" > /tmp/pistreamer
-```
-Alternatively you can find the daemon and kill it
-```
-ps -ax | grep pistreamer_v2
-sudo kill -9 {PROCESS_ID_FOUND_ABOVE}
-```
+## Service operation
+To run the streamer and all ffmpeg processes in the background configure the script to be a service on the rpi.
 
 ## Stabilization
 Pass the flag `--stabilization` to the command line to achieve software image stabilization through opencv. Due to the computational overhead of stabilization, a significant FPS penalty is incurred at all resolutions. See the spec table below to evaluate the best options.

@@ -5,7 +5,7 @@ from command_service import CommandService
 from ffmpeg_configs import (
     get_ffmpeg_command_atak,
     get_ffmpeg_command_record,
-    get_ffmpeg_command_gcs,
+    get_ffmpeg_command_qgc,
 )
 import os
 from pathlib import Path
@@ -40,8 +40,8 @@ class PiStreamer2:
         stabilize: bool,
         resolution: str,
         streaming_bitrate: int,
-        gcs_ip: Optional[str] = None,
-        gcs_port: Optional[str] = None,
+        qgc_ip: Optional[str] = None,
+        qgc_port: Optional[str] = None,
         atak_ip: Optional[str] = None,
         atak_port: Optional[Union[str, int]] = None,
         config_file: str = "./477-Pi4.json",
@@ -56,8 +56,8 @@ class PiStreamer2:
         self.pid = 0
         self.verbose = verbose
         # video settings
-        self.gcs_ip = gcs_ip
-        self.gcs_port = gcs_port
+        self.qgc_ip = qgc_ip
+        self.qgc_port = qgc_port
         self.atak_ip = atak_ip
         self.atak_port = atak_port
         self.streaming_bitrate = streaming_bitrate
@@ -79,10 +79,10 @@ class PiStreamer2:
         )
         # ffmpeg processes
         self.is_recording = False
-        self.is_gcs_streaming = False
+        self.is_qgc_streaming = False
         self.is_atak_streaming = False
         self.ffmpeg_process_record = None
-        self.ffmpeg_process_gcs = None
+        self.ffmpeg_process_qgc = None
         self.ffmpeg_process_atak = None
         # tracking
         self.tracker = ObjectTracker()
@@ -93,6 +93,10 @@ class PiStreamer2:
         os.makedirs(media_directory, exist_ok=True)
 
     def _init_ffmpeg_processes(self) -> None:
+        """
+        Only needs to be done once at the start of the stream.
+        Later modifications to GCS streams will be handled by the command controller.
+        """
         self._close_ffmpeg_processes()
 
         self.ffmpeg_command_record = get_ffmpeg_command_record(
@@ -101,16 +105,16 @@ class PiStreamer2:
             f"./{MEDIA_FILES_DIRECTORY}/{get_timestamp()}.ts",
         )
         print(f"streaming_bitrate {str(self.streaming_bitrate)}")
-        if self.gcs_ip and self.gcs_port:
-            self.ffmpeg_command_gcs = get_ffmpeg_command_gcs(
+        if self.qgc_ip and self.qgc_port:
+            self.ffmpeg_command_qgc = get_ffmpeg_command_qgc(
                 self.resolution,
                 str(FRAMERATE),
-                self.gcs_ip,
-                str(self.gcs_port),
+                self.qgc_ip,
+                str(self.qgc_port),
                 str(self.streaming_bitrate),
             )
         else:
-            self.ffmpeg_command_gcs = None  # type: ignore
+            self.ffmpeg_command_qgc = None  # type: ignore
         if self.atak_ip and self.atak_port:
             self.ffmpeg_command_atak = get_ffmpeg_command_atak(
                 self.resolution,
@@ -203,31 +207,31 @@ class PiStreamer2:
                 self.ffmpeg_process_record.stdin.close()
             self.ffmpeg_process_record.wait()
 
-    def start_gcs_stream(self, ip: str, port: str) -> None:
-        if self.is_gcs_streaming:
-            print("Already GCS streaming...")
+    def start_qgc_stream(self, ip: str, port: str) -> None:
+        if self.is_qgc_streaming:
+            print("Already QGC streaming...")
             return
-        self.gcs_ip = ip
-        self.gcs_port = port
-        self.ffmpeg_command_gcs = get_ffmpeg_command_gcs(
+        self.qgc_ip = ip
+        self.qgc_port = port
+        self.ffmpeg_command_qgc = get_ffmpeg_command_qgc(
             self.resolution,
             str(FRAMERATE),
-            self.gcs_ip,
-            str(self.gcs_port),
+            self.qgc_ip,
+            str(self.qgc_port),
             str(self.streaming_bitrate),
         )
-        self.ffmpeg_process_gcs = subprocess.Popen(  # type: ignore
-            self.ffmpeg_command_gcs, stdin=subprocess.PIPE
+        self.ffmpeg_process_qgc = subprocess.Popen(  # type: ignore
+            self.ffmpeg_command_qgc, stdin=subprocess.PIPE
         )
-        self.is_gcs_streaming = True
+        self.is_qgc_streaming = True
 
-    def stop_gcs_stream(self) -> None:
-        self.is_gcs_streaming = False
-        if self.ffmpeg_process_gcs:
-            print("Stopping GCS stream...")
-            if self.ffmpeg_process_gcs.stdin:
-                self.ffmpeg_process_gcs.stdin.close()
-            self.ffmpeg_process_gcs.wait()
+    def stop_qgc_stream(self) -> None:
+        self.is_qgc_streaming = False
+        if self.ffmpeg_process_qgc:
+            print("Stopping QGC stream...")
+            if self.ffmpeg_process_qgc.stdin:
+                self.ffmpeg_process_qgc.stdin.close()
+            self.ffmpeg_process_qgc.wait()
 
     def start_atak_stream(self, ip: str, port: str) -> None:
         if self.is_atak_streaming:
@@ -264,7 +268,7 @@ class PiStreamer2:
 
         Also note that the command sender may optionally send the desired file name for the photo.
         """
-        if not self.is_gcs_streaming:
+        if not self.is_qgc_streaming:
             return
 
         is_same_resolution = (
@@ -318,7 +322,7 @@ class PiStreamer2:
 
     def _close_ffmpeg_processes(self) -> None:
         self.stop_recording()
-        self.stop_gcs_stream()
+        self.stop_qgc_stream()
         self.stop_atak_stream()
 
     def stop_and_clean_all(self) -> None:
@@ -350,11 +354,11 @@ class PiStreamer2:
 
         # Init frame and stream
         fps = []
-        self.start_gcs_stream(ip=str(self.gcs_ip), port=str(self.gcs_port))
+        self.start_qgc_stream(ip=str(self.qgc_ip), port=str(self.qgc_port))
         self.command_controller.set_zoom(MIN_ZOOM)
 
         # Main loop
-        fps_value = 20
+        fps_counter = 20
         try:
             i = 0
             startt = time.perf_counter()
@@ -370,11 +374,11 @@ class PiStreamer2:
                     self._read_and_process_commands()
 
                 # Calculate fps
-                if self.verbose and i == fps_value:
+                if self.verbose and i == fps_counter:
                     elapsed_time = time.perf_counter() - startt
                     startt = time.perf_counter()
-                    fps.append(fps_value / elapsed_time)
-                    print(f"fps={fps_value/elapsed_time} | ")
+                    fps.append(fps_counter / elapsed_time)
+                    print(f"fps={fps_counter/elapsed_time} | ")
                     i = 0
 
                 if self.track_status == TrackStatus.INIT.value:
@@ -421,8 +425,8 @@ class PiStreamer2:
                 if self.is_atak_streaming:
                     self.ffmpeg_process_atak.stdin.write(modified_frame_yuv_bytes)  # type: ignore
 
-                if self.is_gcs_streaming:
-                    self.ffmpeg_process_gcs.stdin.write(modified_frame_yuv_bytes)  # type: ignore
+                if self.is_qgc_streaming:
+                    self.ffmpeg_process_qgc.stdin.write(modified_frame_yuv_bytes)  # type: ignore
 
         finally:
             self.stop_and_clean_all()
@@ -441,16 +445,16 @@ if __name__ == "__main__":
         help="Resolution of the video frames (e.g., 1280x720)",
     )
     parser.add_argument(
-        "--gcs_ip",
+        "--qgc_ip",
         type=str,
         default="192.168.1.124",
-        help="Destination IP address for GCS stream",
+        help="Destination IP address for QGroundControl stream",
     )
     parser.add_argument(
-        "--gcs_port",
+        "--qgc_port",
         type=int,
         default=5600,
-        help="Destination port for GCS stream",
+        help="Destination port for QGroundControl stream",
     )
     parser.add_argument(
         "--atak_ip",
@@ -492,8 +496,8 @@ if __name__ == "__main__":
         stabilize=args.stabilize,
         resolution=args.resolution,
         streaming_bitrate=args.bitrate,
-        gcs_ip=args.gcs_ip,
-        gcs_port=args.gcs_port,
+        qgc_ip=args.qgc_ip,
+        qgc_port=args.qgc_port,
         atak_ip=args.atak_ip,
         atak_port=args.atak_port,
         config_file=args.config_file,
