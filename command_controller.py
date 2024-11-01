@@ -222,7 +222,19 @@ class CommandController:
         """
         self.pi_streamer.stop_and_clean_all()
         self.pi_streamer.streaming_bitrate = bitrate
-        # TODO based on preferred_gcs_type start that stream
+
+        if self.pi_streamer.active_gcs == GCSType.QGC.value:
+            self.pi_streamer.start_qgc_stream(
+                ip=str(self.pi_streamer.qgc_ip),
+                port=str(self.pi_streamer.qgc_port),
+            )
+        elif self.pi_streamer.active_gcs == GCSType.ATAK.value:
+            self.pi_streamer.start_atak_stream(
+                ip=str(self.pi_streamer.atak_ip),
+                port=str(self.pi_streamer.atak_port),
+            )
+        else:
+            print("Invalid GCS type.")
 
     def set_zoom(self, zoom_factor: Union[int, float]) -> None:
         # Adjust the zoom by setting the crop rectangle

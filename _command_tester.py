@@ -13,7 +13,7 @@ def _send_data(command_type: CommandType, command_value: str = "") -> None:
 # Modify the command_type and command_value as needed=
 
 #######-####### BITRATE #######-#######
-# _send_data(command_type=CommandType.BITRATE, command_value="2010")
+# _send_data(command_type=CommandType.BITRATE, command_value="3000")
 
 #######-####### ZOOM #######-#######
 # _send_data(command_type=CommandType.ZOOM, command_value="4.0")
@@ -54,4 +54,4 @@ def _send_data(command_type: CommandType, command_value: str = "") -> None:
 # )
 
 #######-####### TRACKING #######-#######
-_send_data(command_type=CommandType.INIT_TRACKING_POI, command_value="560,290")
+# _send_data(command_type=CommandType.INIT_TRACKING_POI, command_value="560,290")

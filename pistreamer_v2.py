@@ -223,9 +223,12 @@ class PiStreamer2:
             str(self.qgc_port),
             str(self.streaming_bitrate),
         )
+        print(f"Starting QGC stream {self.ffmpeg_command_qgc}")
         self.ffmpeg_process_qgc = subprocess.Popen(  # type: ignore
             self.ffmpeg_command_qgc, stdin=subprocess.PIPE
         )
+        if not self.picam2.started:
+            self.picam2.start()
         self.is_qgc_streaming = True
 
     def stop_qgc_stream(self) -> None:
@@ -249,9 +252,12 @@ class PiStreamer2:
             str(self.atak_port),
             str(self.streaming_bitrate),
         )
+        print(f"Starting ATAK stream {self.ffmpeg_command_atak}")
         self.ffmpeg_process_atak = subprocess.Popen(  # type: ignore
             self.ffmpeg_command_atak, stdin=subprocess.PIPE
         )
+        if not self.picam2.started:
+            self.picam2.start()
         self.is_atak_streaming = True
 
     def stop_atak_stream(self) -> None:
