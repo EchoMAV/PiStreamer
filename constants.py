@@ -32,6 +32,8 @@ class CommandType(Enum):
     STOP_QGC_STREAM = "stop_qgc_stream"
     ### ^^^^
     ### vvvv Setting the ATAK host will start it and set it to preferred and stop the QGC stream
+    ATAK_IP = "atak_ip"  # `atak_ip 224.1.1.1` is an example and is usually multicast
+    ATAK_PORT = "atak_port"  # `atak_port 5002` is an example
     ATAK_HOST = "atak_host"  # `atak_host 224.1.1.1:5002` is an example
     START_ATAK_STREAM = "start_atak_stream"  # uses the ip/port set by the host
     STOP_ATAK_STREAM = "stop_atak_stream"
@@ -66,3 +68,8 @@ class TrackStatus(Enum):
     ACTIVE = "active"
     INIT = "init"
     NONE = "none"
+
+
+class GCSType(Enum):
+    QGC = "qgc"  # QGroundControl
+    ATAK = "atak"  # Android (Tactical Assault/Team Awareness) Kit

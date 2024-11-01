@@ -26,6 +26,7 @@ from constants import (
     MIN_ZOOM,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
+    GCSType,
     TrackStatus,
     ZoomStatus,
 )
@@ -47,6 +48,7 @@ class PiStreamer2:
         config_file: str = "./477-Pi4.json",
         verbose: bool = False,
         max_zoom: float = DEFAULT_MAX_ZOOM,
+        active_gcs: str = GCSType.QGC.value,
     ) -> None:
         # utilities
         from command_controller import CommandController
@@ -55,6 +57,7 @@ class PiStreamer2:
         self.command_service: CommandService = CommandService()
         self.pid = 0
         self.verbose = verbose
+        self.active_gcs = active_gcs
         # video settings
         self.qgc_ip = qgc_ip
         self.qgc_port = qgc_port
@@ -354,7 +357,20 @@ class PiStreamer2:
 
         # Init frame and stream
         fps = []
-        self.start_qgc_stream(ip=str(self.qgc_ip), port=str(self.qgc_port))
+
+        # Start the active GCS stream
+        if self.active_gcs == GCSType.ATAK.value:
+            if not str(self.atak_ip) or not str(self.atak_port):
+                print(
+                    "ATAK IP and port must be set to stream to ATAK. Defaulting to QGC."
+                )
+                self.active_gcs = GCSType.QGC.value
+            else:
+                self.start_atak_stream(ip=str(self.atak_ip), port=str(self.atak_port))
+
+        if self.active_gcs == GCSType.QGC.value:
+            self.start_qgc_stream(ip=str(self.qgc_ip), port=str(self.qgc_port))
+
         self.command_controller.set_zoom(MIN_ZOOM)
 
         # Main loop
@@ -486,6 +502,12 @@ if __name__ == "__main__":
         default=DEFAULT_MAX_ZOOM,
         help="Max Zoom rate of the EO",
     )
+    parser.add_argument(
+        "--active_gcs",
+        type=str,
+        default=GCSType.QGC.value,
+        help="Active GCS type to stream too",
+    )
     args = parser.parse_args()
     try:
         Validator(args)
@@ -503,6 +525,7 @@ if __name__ == "__main__":
         config_file=args.config_file,
         verbose=args.verbose,
         max_zoom=args.max_zoom,
+        active_gcs=args.active_gcs,
     )
     from command_controller import CommandController
 

@@ -7,6 +7,7 @@ from constants import (
     MIN_ZOOM,
     ZOOM_RATE,
     CommandType,
+    GCSType,
     OutputCommandType,
     ZoomStatus,
     OUTPUT_SOCKET_PORT,
@@ -80,7 +81,40 @@ class CommandController:
         elif command_type == CommandType.STOP_RECORDING.value:
             self.pi_streamer.stop_recording()
         elif command_type == CommandType.QGC_HOST.value:
-            self._reset_gcs_host(command_value, "qgc")
+            ip, port = map(str.strip, command_value.split(" ")[0].split(":"))
+            self._reset_gcs_host(ip=ip, port=port, new_active_gcs=GCSType.QGC)
+        elif command_type == CommandType.QGC_PORT.value:
+            try:
+                new_port = str(command_value)
+                if not self.validator.validate_port(new_port):
+                    raise Exception(
+                        f"Error: {new_port} is not a valid port. It must be between 1 and 65535."
+                    )
+                print(f"Setting new QGC port: {new_port}")
+                self._reset_gcs_host(
+                    ip=str(self.pi_streamer.qgc_ip),
+                    port=new_port,
+                    new_active_gcs=GCSType.QGC,
+                )
+            except (IndexError, ValueError):
+                raise Exception(
+                    "Invalid port command. Use 'port <value>' where value is an int between 1 and 65535."
+                )
+        elif command_type == CommandType.QGC_IP.value:
+            try:
+                new_ip = str(command_value)
+                if not self.validator.validate_ip(new_ip):
+                    raise Exception(f"Error: {new_ip} is not a valid IP Address.")
+                print(f"Setting new QGC IP: {new_ip}")
+                self._reset_gcs_host(
+                    ip=new_ip,
+                    port=str(self.pi_streamer.qgc_port),
+                    new_active_gcs=GCSType.QGC,
+                )
+            except (IndexError, ValueError):
+                raise Exception(
+                    "Invalid ip command. Use 'ip <value>' where value is a valid ip address."
+                )
         elif command_type == CommandType.START_QGC_STREAM.value:
             self.pi_streamer.start_qgc_stream(
                 ip=str(self.pi_streamer.qgc_ip),
@@ -89,7 +123,45 @@ class CommandController:
         elif command_type == CommandType.STOP_QGC_STREAM.value:
             self.pi_streamer.stop_qgc_stream()
         elif command_type == CommandType.ATAK_HOST.value:
-            self._reset_gcs_host(command_value, "atak")
+            ip, port = map(str.strip, command_value.split(" ")[0].split(":"))
+            self._reset_gcs_host(ip=ip, port=port, new_active_gcs=GCSType.ATAK)
+        elif command_type == CommandType.ATAK_PORT.value:
+            try:
+                new_port = str(command_value)
+                if not self.validator.validate_port(new_port):
+                    raise Exception(
+                        f"Error: {new_port} is not a valid port. It must be between 1 and 65535."
+                    )
+                print(f"Setting new ATAK port: {new_port}")
+                self._reset_gcs_host(
+                    ip=str(self.pi_streamer.atak_ip),
+                    port=new_port,
+                    new_active_gcs=GCSType.ATAK,
+                )
+            except (IndexError, ValueError):
+                raise Exception(
+                    "Invalid port command. Use 'port <value>' where value is an int between 1 and 65535."
+                )
+        elif command_type == CommandType.ATAK_IP.value:
+            try:
+                new_ip = str(command_value)
+                if not self.validator.validate_ip(new_ip):
+                    raise Exception(f"Error: {new_ip} is not a valid IP Address.")
+                print(f"Setting new ATAK IP: {new_ip}")
+                self._reset_gcs_host(
+                    ip=new_ip,
+                    port=str(self.pi_streamer.atak_port),
+                    new_active_gcs=GCSType.ATAK,
+                )
+            except (IndexError, ValueError):
+                raise Exception(
+                    "Invalid ip command. Use 'ip <value>' where value is a valid ip address."
+                )
+        elif command_type == CommandType.START_ATAK_STREAM.value:
+            self.pi_streamer.start_atak_stream(
+                ip=str(self.pi_streamer.atak_ip),
+                port=str(self.pi_streamer.atak_port),
+            )
         elif command_type == CommandType.STOP_ATAK_STREAM.value:
             self.pi_streamer.stop_atak_stream()
         elif command_type == CommandType.BITRATE.value:
@@ -106,36 +178,10 @@ class CommandController:
                 raise Exception(
                     "Invalid bitrate command. Use 'bitrate <value>' where value is an int 500-10000 kbps."
                 )
-        elif command_type == CommandType.QGC_PORT.value:
-            try:
-                new_port = str(command_value)
-                if not self.validator.validate_port(new_port):
-                    raise Exception(
-                        f"Error: {new_port} is not a valid port. It must be between 1 and 65535."
-                    )
-                print(f"Setting new QGC port: {new_port}")
-                self._reset_gcs_host("qgc_port", new_port)
-            except (IndexError, ValueError):
-                raise Exception(
-                    "Invalid port command. Use 'port <value>' where value is an int between 1 and 65535."
-                )
-        elif command_type == CommandType.QGC_IP.value:
-            try:
-                new_ip = str(command_value)
-                if not self.validator.validate_ip(new_ip):
-                    raise Exception(f"Error: {new_ip} is not a valid IP Address.")
-                print(f"Setting new QGC IP: {new_ip}")
-                self._reset_gcs_host("qgc_ip", new_ip)
-            except (IndexError, ValueError):
-                raise Exception(
-                    "Invalid ip command. Use 'ip <value>' where value is a valid ip address."
-                )
         else:
             raise Exception(f"Unknown command_type: `{command_type}`")
 
-    def _reset_gcs_host(
-        self, ip: str, port: str, new_preferred_gcs: PreferredGCSType
-    ) -> None:
+    def _reset_gcs_host(self, ip: str, port: str, new_active_gcs: GCSType) -> None:
         """
         If the ATAK or QGC (the supported GCS options) hosts change, we first stop all GCS streams,
         change their ip and port, and start the new target stream.
@@ -145,12 +191,24 @@ class CommandController:
                 raise Exception(f"Error: {ip} is not a valid ip.")
             if not self.validator.validate_port(port):
                 raise Exception(f"Error: {port} is not a valid port.")
-            print(f"Setting new {stream_name} IP: {ip} and port: {port}")
 
-            # first we stop both streams then restart the target one
+            print(
+                f"Setting new {new_active_gcs.value} stream - IP: {ip} and port: {port}"
+            )
+
+            self.pi_streamer.active_gcs = new_active_gcs.value
             self.pi_streamer.stop_and_clean_all()
-            _start_method = getattr(self.pi_streamer, f"start_{stream_name}_stream")
-            _start_method(ip=ip, port=port)
+
+            if new_active_gcs == GCSType.QGC:
+                self.pi_streamer.qgc_ip = ip
+                self.pi_streamer.qgc_port = port
+                self.pi_streamer.start_qgc_stream(ip=ip, port=port)
+            elif new_active_gcs == GCSType.ATAK:
+                self.pi_streamer.atak_ip = ip
+                self.pi_streamer.atak_port = port
+                self.pi_streamer.start_atak_stream(ip=ip, port=port)
+            else:
+                raise Exception("Invalid GCS type.")
 
         except (IndexError, ValueError):
             raise Exception("Invalid ip:port host command.")
