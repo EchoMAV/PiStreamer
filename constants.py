@@ -24,19 +24,20 @@ class CommandType(Enum):
     Some commands require a value to be passed with them and others are standalone.
     """
 
-    BITRATE = "bitrate"  # `bitrate 2500` is an example`
-    GCS_IP = "gcs_ip"  # `gcs_ip 192.168.1.50` is an example
+    ### vvvv Setting the IP, PORT, or HOST will start the active GCS type (QGC or ATAK)
+    GCS_IP = "gcs_ip"  # `qgcgcs_ip_ip 192.168.1.50` is an example
     GCS_PORT = "gcs_port"  # `gcs_port 5601` is an example
-    GCS_HOST = "gsc_host"  # `gsc_host 192.168.1.50:5601` is an example
+    GCS_HOST = "gcs_host"  # `gcs_host 192.168.1.50:5601` is an example
+    START_GCS_STREAM = "start_gcs_stream"  # uses the ip/port set by the above commands
+    STOP_GCS_STREAM = "stop_gcs_stream"
+    ACTIVE_GCS = "active_gcs"  # `active_gcs atak` is an example
+    ### ^^^^
+    BITRATE = "bitrate"  # `bitrate 2500` is an example`
     RECORD = "record"  # record <Optional: file_name>` is an example
     STOP_RECORDING = "stop_recording"
-    START_GCS_STREAM = "start_gcs_stream"
-    STOP_GCS_STREAM = "stop_gcs_stream"
     ZOOM = "zoom"  # `zoom 1.0`, `zoom in`, `zoom stop` are examples
     MAX_ZOOM = "max_zoom"  # `max_zoom 8.0` is an example
     TAKE_PHOTO = "take_photo"  # `take_photo <Optional: file_name>` is an example
-    ATAK_HOST = "atak_host"  # `atak_host 192.168.1.1:5600` is an example
-    STOP_ATAK = "stop_atak"
     STABILIZE = "stabilize"
     INIT_TRACKING_POI = "init_tracking_poi"  # `init_tracking_poi x,y` is an example
     STOP_TRACKING = "stop_tracking"
@@ -61,3 +62,8 @@ class TrackStatus(Enum):
     ACTIVE = "active"
     INIT = "init"
     NONE = "none"
+
+
+class GCSType(Enum):
+    QGC = "qgc"  # QGroundControl
+    ATAK = "atak"  # Android (Tactical Assault/Team Awareness) Kit

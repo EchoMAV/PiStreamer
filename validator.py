@@ -2,6 +2,8 @@ import os
 import ipaddress
 from typing import Any, Optional
 
+from constants import GCSType
+
 
 class Validator:
     def __init__(self, args: Optional[Any] = None) -> None:
@@ -13,14 +15,11 @@ class Validator:
         if not self.args:
             return False
         ret = self.validate_ip(str(self.args.gcs_ip))
-        if self.args.atak_ip:
-            ret = self.validate_ip(str(self.args.atak_ip))
-        if self.args.atak_port:
-            ret &= self.validate_port(str(self.args.gcs_port))
-        ret &= self.validate_port(str(self.args.atak_port))
+        ret &= self.validate_port(str(self.args.gcs_port))
         ret &= self.validate_bitrate(int(self.args.bitrate))
         ret &= self.is_json_file(str(self.args.config_file))
         ret &= self.validate_max_zoom(float(self.args.max_zoom))
+        ret &= self.validate_active_gcs(self.args.active_gcs)
         return ret
 
     def validate_ip(self, ip: str) -> bool:
@@ -53,6 +52,9 @@ class Validator:
             return False
         except ValueError:
             return False
+
+    def validate_active_gcs(self, active_gcs: str) -> bool:
+        return active_gcs.lower() in [GCSType.QGC.value, GCSType.ATAK.value]
 
     def is_json_file(str, file_name: str) -> bool:
         return os.path.isfile(file_name) and file_name.lower().endswith(".json")

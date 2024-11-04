@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
 from time import time
-from typing import Any, Literal, Union
+from typing import Literal, Optional, Union
 from command_service import CommandService
 from constants import (
     MIN_ZOOM,
     ZOOM_RATE,
     CommandType,
+    GCSType,
     OutputCommandType,
     ZoomStatus,
-    CMD_SOCKET_HOST,
     OUTPUT_SOCKET_PORT,
     OUTPUT_SOCKET_HOST,
     TrackStatus,
@@ -81,32 +81,9 @@ class CommandController:
         elif command_type == CommandType.STOP_RECORDING.value:
             self.pi_streamer.stop_recording()
         elif command_type == CommandType.GCS_HOST.value:
-            self._reset_host(command_value, "gcs")
-        elif command_type == CommandType.START_GCS_STREAM.value:
-            self.pi_streamer.start_gcs_stream(
-                ip=str(self.pi_streamer.gcs_ip),
-                port=str(self.pi_streamer.gcs_port),
-            )
-        elif command_type == CommandType.STOP_GCS_STREAM.value:
-            self.pi_streamer.stop_gcs_stream()
-        elif command_type == CommandType.ATAK_HOST.value:
-            self._reset_host(command_value, "atak")
-        elif command_type == CommandType.STOP_ATAK.value:
-            self.pi_streamer.stop_atak_stream()
-        elif command_type == CommandType.BITRATE.value:
-            try:
-                bitrate = int(command_value)
-                if not self.validator.validate_bitrate(bitrate):
-                    raise Exception(
-                        f"Error: {bitrate} is not a valid bitrate. It must be between 500 and 10000 kbps."
-                    )
-                print(f"Setting new bitrate: {bitrate} kbps")
-                bitrate = bitrate * 1000
-                self._reset_stream("streaming_bitrate", bitrate)
-            except (IndexError, ValueError):
-                raise Exception(
-                    "Invalid bitrate command. Use 'bitrate <value>' where value is an int 500-10000 kbps."
-                )
+            ip, port = map(str.strip, command_value.split(" ")[0].split(":"))
+            print(f"Setting new GCS host {ip}:{port}")
+            self._reset_gcs_host(ip=ip, port=port)
         elif command_type == CommandType.GCS_PORT.value:
             try:
                 new_port = str(command_value)
@@ -114,8 +91,11 @@ class CommandController:
                     raise Exception(
                         f"Error: {new_port} is not a valid port. It must be between 1 and 65535."
                     )
-                print(f"Setting new GCS port: {new_port}")
-                self._reset_stream("gcs_port", new_port)
+                print(f"Setting new GCS port {new_port}")
+                self._reset_gcs_host(
+                    ip=str(self.pi_streamer.gcs_ip),
+                    port=new_port,
+                )
             except (IndexError, ValueError):
                 raise Exception(
                     "Invalid port command. Use 'port <value>' where value is an int between 1 and 65535."
@@ -125,50 +105,111 @@ class CommandController:
                 new_ip = str(command_value)
                 if not self.validator.validate_ip(new_ip):
                     raise Exception(f"Error: {new_ip} is not a valid IP Address.")
-                print(f"Setting new GCS IP: {new_ip}")
-                self._reset_stream("gcs_ip", new_ip)
+                print(f"Setting new GCS IP {new_ip}")
+                self._reset_gcs_host(
+                    ip=new_ip,
+                    port=str(self.pi_streamer.gcs_port),
+                )
             except (IndexError, ValueError):
                 raise Exception(
                     "Invalid ip command. Use 'ip <value>' where value is a valid ip address."
                 )
+        elif command_type == CommandType.START_GCS_STREAM.value:
+            if self.pi_streamer.active_gcs == GCSType.QGC.value:
+                start_func = self.pi_streamer.start_qgc_stream
+            elif self.pi_streamer.active_gcs == GCSType.ATAK.value:
+                start_func = self.pi_streamer.start_atak_stream
+            else:
+                raise Exception(f"Unsupported GCS type {self.pi_streamer.active_gcs}.")
+            start_func(
+                ip=str(self.pi_streamer.gcs_ip),
+                port=str(self.pi_streamer.gcs_port),
+            )
+        elif command_type == CommandType.STOP_GCS_STREAM.value:
+            if self.pi_streamer.active_gcs == GCSType.QGC.value:
+                stop_func = self.pi_streamer.stop_qgc_stream
+            elif self.pi_streamer.active_gcs == GCSType.ATAK.value:
+                stop_func = self.pi_streamer.stop_atak_stream
+            else:
+                raise Exception(f"Unsupported GCS type {self.pi_streamer.active_gcs}.")
+            stop_func()
+        elif command_type == CommandType.ACTIVE_GCS.value:
+            command_value = command_value.lower().strip()
+            if command_value not in [GCSType.QGC.value, GCSType.ATAK.value]:
+                raise Exception(f"Unsupported GCS type {self.pi_streamer.active_gcs}.")
+            self._reset_gcs_host(
+                ip=str(self.pi_streamer.gcs_ip),
+                port=str(self.pi_streamer.gcs_port),
+                gcs_type=command_value,
+            )
+        elif command_type == CommandType.BITRATE.value:
+            try:
+                bitrate = int(command_value)
+                if not self.validator.validate_bitrate(bitrate):
+                    raise Exception(
+                        f"Error: {bitrate} is not a valid bitrate. It must be between 500 and 10000 kbps."
+                    )
+                print(f"Setting new bitrate: {bitrate} kbps")
+                bitrate = bitrate * 1000
+                self._reset_bitrate(bitrate)
+            except (IndexError, ValueError):
+                raise Exception(
+                    "Invalid bitrate command. Use 'bitrate <value>' where value is an int 500-10000 kbps."
+                )
         else:
             raise Exception(f"Unknown command_type: `{command_type}`")
 
-    def _reset_host(self, command_value: str, stream_name: Literal["atak", "gcs"]):
+    def _reset_gcs_host(self, ip: str, port: str, gcs_type: str = "") -> None:
         """
-        If the ATAK or GCS host changes, we change the ip and port and reset the ffmpeg stream.
+        If the ATAK or QGC (the supported GCS options) hosts change, we first stop all GCS streams,
+        change their ip and port, and start the active target stream again.
         """
         try:
-            ip, port = str(command_value).split(" ")[0].split(":")
             if not self.validator.validate_ip(ip):
                 raise Exception(f"Error: {ip} is not a valid ip.")
             if not self.validator.validate_port(port):
                 raise Exception(f"Error: {port} is not a valid port.")
-            print(f"Setting new {stream_name} IP: {ip} and port: {port}")
 
-            # first we stop the stream then restart it
-            _stop_method = getattr(self.pi_streamer, f"stop_{stream_name}_stream")
-            _start_method = getattr(self.pi_streamer, f"start_{stream_name}_stream")
-            _stop_method()
-            _start_method(ip=ip, port=port)
+            print(
+                f"Setting new {self.pi_streamer.active_gcs} stream - IP: {ip} and port: {port}"
+            )
+
+            self.pi_streamer.stop_and_clean_all()
+
+            if gcs_type:
+                self.pi_streamer.active_gcs = gcs_type
+            self.pi_streamer.gcs_ip = ip
+            self.pi_streamer.gcs_port = port
+
+            if self.pi_streamer.active_gcs == GCSType.QGC.value:
+                self.pi_streamer.start_qgc_stream(ip=ip, port=port)
+            elif self.pi_streamer.active_gcs == GCSType.ATAK.value:
+                self.pi_streamer.start_atak_stream(ip=ip, port=port)
+            else:
+                raise Exception("Invalid GCS type.")
 
         except (IndexError, ValueError):
             raise Exception("Invalid ip:port host command.")
 
-    def _reset_stream(
+    def _reset_bitrate(
         self,
-        field_name: Literal["streaming_bitrate", "gcs_ip", "gcs_port"],
-        field_value: Any,
+        bitrate: int,
     ):
         """
-        The pi_streamer controls the major properties of the stream. This function pauses
-        the current stream, sets the new value, and resumes the stream.
-
-        This is a hard reset since it also can effect the underlying ffmpeg processes as well.
+        Similar to _reset_gcs_host but allows for more granular control over the field being set.
         """
         self.pi_streamer.stop_and_clean_all()
-        setattr(self.pi_streamer, field_name, field_value)
-        self.pi_streamer.stream()
+        self.pi_streamer.streaming_bitrate = bitrate
+
+        if self.pi_streamer.active_gcs == GCSType.QGC.value:
+            start_func = self.pi_streamer.start_qgc_stream
+        elif self.pi_streamer.active_gcs == GCSType.ATAK.value:
+            start_func = self.pi_streamer.start_atak_stream
+
+        start_func(
+            ip=str(self.pi_streamer.gcs_ip),
+            port=str(self.pi_streamer.gcs_port),
+        )
 
     def set_zoom(self, zoom_factor: Union[int, float]) -> None:
         # Adjust the zoom by setting the crop rectangle
