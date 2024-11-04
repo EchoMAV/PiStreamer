@@ -35,7 +35,7 @@ def get_ffmpeg_command_record(
     ]
 
 
-def get_ffmpeg_command_qgc(
+def get_ffmpeg_command_rtp(
     resolution: Tuple[int, ...],
     framerate: str,
     gcs_ip: str,
@@ -43,7 +43,7 @@ def get_ffmpeg_command_qgc(
     streaming_bitrate: str,
 ) -> List[str]:
     """
-    Used for streaming video to QGroundControl as the GCS
+    Generally used for streaming video to QGroundControl as the GCS
     """
     return [
         "ffmpeg",
@@ -74,15 +74,15 @@ def get_ffmpeg_command_qgc(
     ]
 
 
-def get_ffmpeg_command_atak(
+def get_ffmpeg_command_mpeg_ts(
     resolution: Tuple[int, ...],
     framerate: str,
-    atak_ip: str,
-    atak_port: str,
+    gcs_ip: str,
+    gcs_port: str,
     streaming_bitrate: str,
 ) -> List[str]:
     """
-    Used for streaming video to ATAK as the GCS
+    Generally used for streaming video to ATAK as the GCS
     """
     return [
         "ffmpeg",
@@ -109,5 +109,5 @@ def get_ffmpeg_command_atak(
         "nobuffer",  # No buffer for RTP
         "-f",
         "mpegts",  # Output format for MPEG-TS
-        f"udp://{atak_ip}:{atak_port}",
+        f"udp://{gcs_ip}:{gcs_port}",
     ]

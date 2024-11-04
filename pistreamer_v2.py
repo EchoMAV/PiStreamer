@@ -3,9 +3,9 @@
 from typing import Any, Optional
 from command_service import CommandService
 from ffmpeg_configs import (
-    get_ffmpeg_command_atak,
+    get_ffmpeg_command_mpeg_ts,
     get_ffmpeg_command_record,
-    get_ffmpeg_command_qgc,
+    get_ffmpeg_command_rtp,
 )
 import os
 from pathlib import Path
@@ -26,7 +26,7 @@ from constants import (
     MIN_ZOOM,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
-    GCSType,
+    StreamingProtocolType,
     TrackStatus,
     ZoomStatus,
 )
@@ -46,7 +46,7 @@ class PiStreamer2:
         config_file: str = "./477-Pi4.json",
         verbose: bool = False,
         max_zoom: float = DEFAULT_MAX_ZOOM,
-        active_gcs: str = GCSType.QGC.value,
+        streaming_protocol: str = StreamingProtocolType.RTP.value,
     ) -> None:
         # utilities
         from command_controller import CommandController
@@ -55,7 +55,7 @@ class PiStreamer2:
         self.command_service: CommandService = CommandService()
         self.pid = 0
         self.verbose = verbose
-        self.active_gcs = active_gcs
+        self.streaming_protocol = streaming_protocol
         # video settings
         self.gcs_ip = gcs_ip
         self.gcs_port = gcs_port
@@ -78,11 +78,11 @@ class PiStreamer2:
         )
         # ffmpeg processes
         self.is_recording = False
-        self.is_qgc_streaming = False
-        self.is_atak_streaming = False
+        self.is_rtp_streaming = False
+        self.is_mpeg_ts_streaming = False
         self.ffmpeg_process_record = None
-        self.ffmpeg_process_qgc = None
-        self.ffmpeg_process_atak = None
+        self.ffmpeg_process_rtp = None
+        self.ffmpeg_process_mpeg_ts = None
         # tracking
         self.tracker = ObjectTracker()
         self.track_status = TrackStatus.NONE.value
@@ -106,14 +106,14 @@ class PiStreamer2:
             str(FRAMERATE),
             f"./{MEDIA_FILES_DIRECTORY}/{get_timestamp()}.ts",
         )
-        self.ffmpeg_command_qgc = get_ffmpeg_command_qgc(
+        self.ffmpeg_command_rtp = get_ffmpeg_command_rtp(
             self.resolution,
             str(FRAMERATE),
             str(self.gcs_ip),
             str(self.gcs_port),
             str(self.streaming_bitrate),
         )
-        self.ffmpeg_command_atak = get_ffmpeg_command_atak(
+        self.ffmpeg_command_mpeg_ts = get_ffmpeg_command_mpeg_ts(
             self.resolution,
             str(FRAMERATE),
             str(self.gcs_ip),
@@ -202,65 +202,65 @@ class PiStreamer2:
                 self.ffmpeg_process_record.stdin.close()
             self.ffmpeg_process_record.wait()
 
-    def start_qgc_stream(self, ip: str, port: str) -> None:
-        if self.is_qgc_streaming:
-            print("Already QGC streaming...")
+    def start_rtp_stream(self, ip: str, port: str) -> None:
+        if self.is_rtp_streaming:
+            print("Already RTP streaming...")
             return
         self.gcs_ip = ip
         self.gcs_port = port
-        self.active_gcs = GCSType.QGC.value
-        self.ffmpeg_command_qgc = get_ffmpeg_command_qgc(
+        self.streaming_protocol = StreamingProtocolType.RTP.value
+        self.ffmpeg_command_rtp = get_ffmpeg_command_rtp(
             self.resolution,
             str(FRAMERATE),
             self.gcs_ip,
             str(self.gcs_port),
             str(self.streaming_bitrate),
         )
-        print(f"Starting QGC stream {self.ffmpeg_command_qgc}")
-        self.ffmpeg_process_qgc = subprocess.Popen(  # type: ignore
-            self.ffmpeg_command_qgc, stdin=subprocess.PIPE
+        print(f"Starting RTP stream {self.ffmpeg_command_rtp}")
+        self.ffmpeg_process_rtp = subprocess.Popen(  # type: ignore
+            self.ffmpeg_command_rtp, stdin=subprocess.PIPE
         )
         if not self.picam2.started:
             self.picam2.start()
-        self.is_qgc_streaming = True
+        self.is_rtp_streaming = True
 
-    def stop_qgc_stream(self) -> None:
-        self.is_qgc_streaming = False
-        if self.ffmpeg_process_qgc:
-            print("Stopping QGC stream...")
-            if self.ffmpeg_process_qgc.stdin:
-                self.ffmpeg_process_qgc.stdin.close()
-            self.ffmpeg_process_qgc.wait()
+    def stop_rtp_stream(self) -> None:
+        self.is_rtp_streaming = False
+        if self.ffmpeg_process_rtp:
+            print("Stopping RTP stream...")
+            if self.ffmpeg_process_rtp.stdin:
+                self.ffmpeg_process_rtp.stdin.close()
+            self.ffmpeg_process_rtp.wait()
 
-    def start_atak_stream(self, ip: str, port: str) -> None:
-        if self.is_atak_streaming:
-            print("Already ATAK streaming...")
+    def start_mpeg_ts_stream(self, ip: str, port: str) -> None:
+        if self.is_mpeg_ts_streaming:
+            print("Already MPEG-TS streaming...")
             return
         self.gcs_ip = ip
         self.gcs_port = port
-        self.active_gcs = GCSType.ATAK.value
-        self.ffmpeg_command_atak = get_ffmpeg_command_atak(
+        self.streaming_protocol = StreamingProtocolType.MPEG_TS.value
+        self.ffmpeg_command_mpeg_ts = get_ffmpeg_command_mpeg_ts(
             self.resolution,
             str(FRAMERATE),
             self.gcs_ip,
             str(self.gcs_port),
             str(self.streaming_bitrate),
         )
-        print(f"Starting ATAK stream {self.ffmpeg_command_atak}")
-        self.ffmpeg_process_atak = subprocess.Popen(  # type: ignore
-            self.ffmpeg_command_atak, stdin=subprocess.PIPE
+        print(f"Starting MPEG-TS stream {self.ffmpeg_command_mpeg_ts}")
+        self.ffmpeg_process_mpeg_ts = subprocess.Popen(  # type: ignore
+            self.ffmpeg_command_mpeg_ts, stdin=subprocess.PIPE
         )
         if not self.picam2.started:
             self.picam2.start()
-        self.is_atak_streaming = True
+        self.is_mpeg_ts_streaming = True
 
-    def stop_atak_stream(self) -> None:
-        self.is_atak_streaming = False
-        if self.ffmpeg_process_atak:
-            print("Stopping ATAK streaming...")
-            if self.ffmpeg_process_atak.stdin:
-                self.ffmpeg_process_atak.stdin.close()
-            self.ffmpeg_process_atak.wait()
+    def stop_mpeg_ts_stream(self) -> None:
+        self.is_mpeg_ts_streaming = False
+        if self.ffmpeg_process_mpeg_ts:
+            print("Stopping MPEG-TS streaming...")
+            if self.ffmpeg_process_mpeg_ts.stdin:
+                self.ffmpeg_process_mpeg_ts.stdin.close()
+            self.ffmpeg_process_mpeg_ts.wait()
 
     def take_photo(self, file_name: str = "") -> None:
         """
@@ -271,7 +271,7 @@ class PiStreamer2:
 
         Also note that the command sender may optionally send the desired file name for the photo.
         """
-        if not self.is_qgc_streaming:
+        if not self.is_rtp_streaming:
             return
 
         is_same_resolution = (
@@ -325,8 +325,8 @@ class PiStreamer2:
 
     def _close_ffmpeg_processes(self) -> None:
         self.stop_recording()
-        self.stop_qgc_stream()
-        self.stop_atak_stream()
+        self.stop_rtp_stream()
+        self.stop_mpeg_ts_stream()
 
     def stop_and_clean_all(self) -> None:
         print("Stopping and cleaning camera resources...")
@@ -359,10 +359,10 @@ class PiStreamer2:
         fps = []
 
         # Start the active GCS stream
-        if self.active_gcs == GCSType.QGC.value:
-            self.start_qgc_stream(ip=str(self.gcs_ip), port=str(self.gcs_port))
-        elif self.active_gcs == GCSType.ATAK.value:
-            self.start_atak_stream(ip=str(self.gcs_ip), port=str(self.gcs_port))
+        if self.streaming_protocol == StreamingProtocolType.RTP.value:
+            self.start_rtp_stream(ip=str(self.gcs_ip), port=str(self.gcs_port))
+        elif self.streaming_protocol == StreamingProtocolType.MPEG_TS.value:
+            self.start_mpeg_ts_stream(ip=str(self.gcs_ip), port=str(self.gcs_port))
         else:
             raise Exception("Invalid active GCS type")
 
@@ -433,10 +433,10 @@ class PiStreamer2:
                 if not modified_frame_yuv_bytes:
                     modified_frame_yuv_bytes = pure_frame_yuv_bytes
 
-                if self.is_qgc_streaming:
-                    self.ffmpeg_process_qgc.stdin.write(modified_frame_yuv_bytes)  # type: ignore
-                elif self.is_atak_streaming:
-                    self.ffmpeg_process_atak.stdin.write(modified_frame_yuv_bytes)  # type: ignore
+                if self.is_rtp_streaming:
+                    self.ffmpeg_process_rtp.stdin.write(modified_frame_yuv_bytes)  # type: ignore
+                elif self.is_mpeg_ts_streaming:
+                    self.ffmpeg_process_mpeg_ts.stdin.write(modified_frame_yuv_bytes)  # type: ignore
 
         finally:
             self.stop_and_clean_all()
@@ -458,13 +458,13 @@ if __name__ == "__main__":
         "--gcs_ip",
         type=str,
         default="192.168.1.124",
-        help="Destination IP address for QGroundControl or ATAK stream",
+        help="Destination IP address for the GCS stream (i.e. QGroundControl or ATAK)",
     )
     parser.add_argument(
         "--gcs_port",
         type=int,
         default=5600,
-        help="Destination port for QGroundControl or ATAK stream",
+        help="Destination port for the GCS stream (i.e. QGroundControl or ATAK)",
     )
     parser.add_argument(
         "--bitrate", type=int, default=2000000, help="Streaming bitrate in bps"
@@ -485,10 +485,10 @@ if __name__ == "__main__":
         help="Max Zoom rate of the EO",
     )
     parser.add_argument(
-        "--active_gcs",
+        "--streaming_protocol",
         type=str,
-        default=GCSType.QGC.value,
-        help="Active GCS type to stream too",
+        default=StreamingProtocolType.RTP.value,
+        help="Streaming protocol to use (RTP or MPEGTS)",
     )
     args = parser.parse_args()
     try:
@@ -505,7 +505,7 @@ if __name__ == "__main__":
         config_file=args.config_file,
         verbose=args.verbose,
         max_zoom=args.max_zoom,
-        active_gcs=args.active_gcs,
+        streaming_protocol=args.streaming_protocol,
     )
     from command_controller import CommandController
 

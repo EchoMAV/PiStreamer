@@ -7,7 +7,7 @@ from constants import (
     MIN_ZOOM,
     ZOOM_RATE,
     CommandType,
-    GCSType,
+    StreamingProtocolType,
     OutputCommandType,
     ZoomStatus,
     OUTPUT_SOCKET_PORT,
@@ -115,32 +115,47 @@ class CommandController:
                     "Invalid ip command. Use 'ip <value>' where value is a valid ip address."
                 )
         elif command_type == CommandType.START_GCS_STREAM.value:
-            if self.pi_streamer.active_gcs == GCSType.QGC.value:
-                start_func = self.pi_streamer.start_qgc_stream
-            elif self.pi_streamer.active_gcs == GCSType.ATAK.value:
-                start_func = self.pi_streamer.start_atak_stream
+            if self.pi_streamer.streaming_protocol == StreamingProtocolType.RTP.value:
+                start_func = self.pi_streamer.start_rtp_stream
+            elif (
+                self.pi_streamer.streaming_protocol
+                == StreamingProtocolType.MPEG_TS.value
+            ):
+                start_func = self.pi_streamer.start_mpeg_ts_stream
             else:
-                raise Exception(f"Unsupported GCS type {self.pi_streamer.active_gcs}.")
+                raise Exception(
+                    f"Unsupported GCS type {self.pi_streamer.streaming_protocol}."
+                )
             start_func(
                 ip=str(self.pi_streamer.gcs_ip),
                 port=str(self.pi_streamer.gcs_port),
             )
         elif command_type == CommandType.STOP_GCS_STREAM.value:
-            if self.pi_streamer.active_gcs == GCSType.QGC.value:
-                stop_func = self.pi_streamer.stop_qgc_stream
-            elif self.pi_streamer.active_gcs == GCSType.ATAK.value:
-                stop_func = self.pi_streamer.stop_atak_stream
+            if self.pi_streamer.streaming_protocol == StreamingProtocolType.RTP.value:
+                stop_func = self.pi_streamer.stop_rtp_stream
+            elif (
+                self.pi_streamer.streaming_protocol
+                == StreamingProtocolType.MPEG_TS.value
+            ):
+                stop_func = self.pi_streamer.stop_mpeg_ts_stream
             else:
-                raise Exception(f"Unsupported GCS type {self.pi_streamer.active_gcs}.")
+                raise Exception(
+                    f"Unsupported GCS type {self.pi_streamer.streaming_protocol}."
+                )
             stop_func()
-        elif command_type == CommandType.ACTIVE_GCS.value:
+        elif command_type == CommandType.STREAMING_PROTOCOL.value:
             command_value = command_value.lower().strip()
-            if command_value not in [GCSType.QGC.value, GCSType.ATAK.value]:
-                raise Exception(f"Unsupported GCS type {self.pi_streamer.active_gcs}.")
+            if command_value not in [
+                StreamingProtocolType.RTP.value,
+                StreamingProtocolType.MPEG_TS.value,
+            ]:
+                raise Exception(
+                    f"Unsupported GCS type {self.pi_streamer.streaming_protocol}."
+                )
             self._reset_gcs_host(
                 ip=str(self.pi_streamer.gcs_ip),
                 port=str(self.pi_streamer.gcs_port),
-                gcs_type=command_value,
+                streaming_protocol=command_value,
             )
         elif command_type == CommandType.BITRATE.value:
             try:
@@ -159,7 +174,7 @@ class CommandController:
         else:
             raise Exception(f"Unknown command_type: `{command_type}`")
 
-    def _reset_gcs_host(self, ip: str, port: str, gcs_type: str = "") -> None:
+    def _reset_gcs_host(self, ip: str, port: str, streaming_protocol: str = "") -> None:
         """
         If the ATAK or QGC (the supported GCS options) hosts change, we first stop all GCS streams,
         change their ip and port, and start the active target stream again.
@@ -171,20 +186,23 @@ class CommandController:
                 raise Exception(f"Error: {port} is not a valid port.")
 
             print(
-                f"Setting new {self.pi_streamer.active_gcs} stream - IP: {ip} and port: {port}"
+                f"Setting new {self.pi_streamer.streaming_protocol} stream - IP: {ip} and port: {port}"
             )
 
             self.pi_streamer.stop_and_clean_all()
 
-            if gcs_type:
-                self.pi_streamer.active_gcs = gcs_type
+            if streaming_protocol:
+                self.pi_streamer.streaming_protocol = streaming_protocol
             self.pi_streamer.gcs_ip = ip
             self.pi_streamer.gcs_port = port
 
-            if self.pi_streamer.active_gcs == GCSType.QGC.value:
-                self.pi_streamer.start_qgc_stream(ip=ip, port=port)
-            elif self.pi_streamer.active_gcs == GCSType.ATAK.value:
-                self.pi_streamer.start_atak_stream(ip=ip, port=port)
+            if self.pi_streamer.streaming_protocol == StreamingProtocolType.RTP.value:
+                self.pi_streamer.start_rtp_stream(ip=ip, port=port)
+            elif (
+                self.pi_streamer.streaming_protocol
+                == StreamingProtocolType.MPEG_TS.value
+            ):
+                self.pi_streamer.start_mpeg_ts_stream(ip=ip, port=port)
             else:
                 raise Exception("Invalid GCS type.")
 
@@ -201,10 +219,10 @@ class CommandController:
         self.pi_streamer.stop_and_clean_all()
         self.pi_streamer.streaming_bitrate = bitrate
 
-        if self.pi_streamer.active_gcs == GCSType.QGC.value:
-            start_func = self.pi_streamer.start_qgc_stream
-        elif self.pi_streamer.active_gcs == GCSType.ATAK.value:
-            start_func = self.pi_streamer.start_atak_stream
+        if self.pi_streamer.streaming_protocol == StreamingProtocolType.RTP.value:
+            start_func = self.pi_streamer.start_rtp_stream
+        elif self.pi_streamer.streaming_protocol == StreamingProtocolType.MPEG_TS.value:
+            start_func = self.pi_streamer.start_mpeg_ts_stream
 
         start_func(
             ip=str(self.pi_streamer.gcs_ip),

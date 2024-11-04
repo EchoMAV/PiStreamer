@@ -13,7 +13,7 @@ def _send_data(command_type: CommandType, command_value: str = "") -> None:
 # Modify the command_type and command_value as needed=
 
 #######-####### BITRATE #######-#######
-_send_data(command_type=CommandType.BITRATE, command_value="3000")
+_send_data(command_type=CommandType.BITRATE, command_value="2500")
 
 #######-####### ZOOM #######-#######
 # _send_data(command_type=CommandType.ZOOM, command_value="4.0")
@@ -36,7 +36,7 @@ _send_data(command_type=CommandType.BITRATE, command_value="3000")
 # _send_data(command_type=CommandType.GCS_HOST, command_value="192.168.1.124:5600")
 # _send_data(command_type=CommandType.START_GCS_STREAM)
 # _send_data(command_type=CommandType.STOP_GCS_STREAM)
-# _send_data(command_type=CommandType.ACTIVE_GCS, command_value="atak")
+_send_data(command_type=CommandType.STREAMING_PROTOCOL, command_value="rtp")
 
 #######-####### RECORD #######-#######
 # _send_data(command_type=CommandType.RECORD)
