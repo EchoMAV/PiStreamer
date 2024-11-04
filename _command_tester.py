@@ -34,11 +34,11 @@ def _send_data(command_type: CommandType, command_value: str = "") -> None:
 _send_data(command_type=CommandType.GCS_HOST, command_value="192.168.1.124:5600")
 
 #######-####### QGC #######-#######
-# _send_data(command_type=CommandType.QGC_IP, command_value="192.168.1.124")
-# _send_data(command_type=CommandType.QGC_PORT, command_value="5600")
-# _send_data(command_type=CommandType.QGC_HOST, command_value="192.168.1.124:5600")
-# _send_data(command_type=CommandType.START_QGC_STREAM)
-# _send_data(command_type=CommandType.STOP_QGC_STREAM)
+# _send_data(command_type=CommandType.GCS_IP, command_value="192.168.1.124")
+# _send_data(command_type=CommandType.GCS_PORT, command_value="5600")
+# _send_data(command_type=CommandType.GCS_HOST, command_value="192.168.1.124:5600")
+# _send_data(command_type=CommandType.START_GCS_STREAM)
+# _send_data(command_type=CommandType.STOP_GCS_STREAM)
 
 #######-####### RECORD #######-#######
 # _send_data(command_type=CommandType.RECORD)

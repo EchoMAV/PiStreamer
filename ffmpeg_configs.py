@@ -38,8 +38,8 @@ def get_ffmpeg_command_record(
 def get_ffmpeg_command_qgc(
     resolution: Tuple[int, ...],
     framerate: str,
-    qgc_ip: str,
-    qgc_port: str,
+    gcs_ip: str,
+    gcs_port: str,
     streaming_bitrate: str,
 ) -> List[str]:
     """
@@ -70,7 +70,7 @@ def get_ffmpeg_command_qgc(
         "nobuffer",  # No buffer for RTP
         "-f",
         "rtp",  # Output format for RTP
-        f"rtp://{qgc_ip}:{qgc_port}",
+        f"rtp://{gcs_ip}:{gcs_port}",
     ]
 
 
