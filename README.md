@@ -47,6 +47,7 @@ _send_data(command_type=CommandType.TAKE_PHOTO) #take single frame photo at 4K r
 _send_data(command_type=CommandType.START_GCS_STREAM) #start the GCS feed
 _send_data(command_type=CommandType.STABILIZE, command_value="start") #start stabilization at current framerate
 _send_data(command_type=CommandType.STABILIZE, command_value="stop") #stop stabilization at current framerate
+_send_data(command_type=CommandType.ACTIVE_GCS, command_value="atak") #stream atak mpeg-ts to current gcs ip and port
 ```
 
 ## Service operation
