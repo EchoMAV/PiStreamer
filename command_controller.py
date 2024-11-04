@@ -134,6 +134,7 @@ class CommandController:
                 raise Exception(f"Unsupported GCS type {self.pi_streamer.active_gcs}.")
             stop_func()
         elif command_type == CommandType.ACTIVE_GCS.value:
+            command_value = command_value.lower().strip()
             if command_value not in [GCSType.QGC.value, GCSType.ATAK.value]:
                 raise Exception(f"Unsupported GCS type {self.pi_streamer.active_gcs}.")
             self._reset_gcs_host(
@@ -141,6 +142,20 @@ class CommandController:
                 port=str(self.pi_streamer.gcs_port),
                 gcs_type=command_value,
             )
+        elif command_type == CommandType.BITRATE.value:
+            try:
+                bitrate = int(command_value)
+                if not self.validator.validate_bitrate(bitrate):
+                    raise Exception(
+                        f"Error: {bitrate} is not a valid bitrate. It must be between 500 and 10000 kbps."
+                    )
+                print(f"Setting new bitrate: {bitrate} kbps")
+                bitrate = bitrate * 1000
+                self._reset_bitrate(bitrate)
+            except (IndexError, ValueError):
+                raise Exception(
+                    "Invalid bitrate command. Use 'bitrate <value>' where value is an int 500-10000 kbps."
+                )
         else:
             raise Exception(f"Unknown command_type: `{command_type}`")
 
