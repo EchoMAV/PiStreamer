@@ -19,7 +19,7 @@ class Validator:
         ret &= self.validate_bitrate(int(self.args.bitrate))
         ret &= self.is_json_file(str(self.args.config_file))
         ret &= self.validate_max_zoom(float(self.args.max_zoom))
-        ret &= self.validate_streaeming_protocol(self.args.active_gcs)
+        ret &= self.validate_streaming_protocol(self.args.streaming_protocol)
         return ret
 
     def validate_ip(self, ip: str) -> bool:
@@ -53,8 +53,8 @@ class Validator:
         except ValueError:
             return False
 
-    def validate_streaeming_protocol(self, active_gcs: str) -> bool:
-        return active_gcs.lower() in [
+    def validate_streaming_protocol(self, streaming_protocol: str) -> bool:
+        return streaming_protocol.lower() in [
             StreamingProtocolType.RTP.value,
             StreamingProtocolType.MPEG_TS.value,
         ]
