@@ -31,9 +31,7 @@ def _send_data(command_type: CommandType, command_value: str = "") -> None:
 # _send_data(command_type=CommandType.TAKE_PHOTO)
 
 #######-####### ATAK #######-#######
-# _send_data(
-#     command_type=CommandType.ATAK_HOST, command_value="224.1.1.1:5002"
-# )
+_send_data(command_type=CommandType.GCS_HOST, command_value="192.168.1.124:5600")
 
 #######-####### QGC #######-#######
 # _send_data(command_type=CommandType.QGC_IP, command_value="192.168.1.124")

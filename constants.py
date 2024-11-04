@@ -24,19 +24,13 @@ class CommandType(Enum):
     Some commands require a value to be passed with them and others are standalone.
     """
 
-    ### vvvv Setting the IP, PORT, or HOST will start it and set it to preferred and stop the ATAK stream
-    QGC_IP = "qgc_ip"  # `qgc_ip 192.168.1.50` is an example
-    QGC_PORT = "qgc_port"  # `qgc_port 5601` is an example
-    QGC_HOST = "gsc_host"  # `gsc_host 192.168.1.50:5601` is an example
-    START_QGC_STREAM = "start_qgc_stream"  # uses the ip/port set by the above commands
-    STOP_QGC_STREAM = "stop_qgc_stream"
-    ### ^^^^
-    ### vvvv Setting the ATAK host will start it and set it to preferred and stop the QGC stream
-    ATAK_IP = "atak_ip"  # `atak_ip 224.1.1.1` is an example and is usually multicast
-    ATAK_PORT = "atak_port"  # `atak_port 5002` is an example
-    ATAK_HOST = "atak_host"  # `atak_host 224.1.1.1:5002` is an example
-    START_ATAK_STREAM = "start_atak_stream"  # uses the ip/port set by the host
-    STOP_ATAK_STREAM = "stop_atak_stream"
+    ### vvvv Setting the IP, PORT, or HOST will start the active GCS type (QGC or ATAK)
+    GCS_IP = "gcs_ip"  # `qgcgcs_ip_ip 192.168.1.50` is an example
+    GCS_PORT = "gcs_port"  # `gcs_port 5601` is an example
+    GCS_HOST = "gcs_host"  # `gcs_host 192.168.1.50:5601` is an example
+    START_GCS_STREAM = "start_gcs_stream"  # uses the ip/port set by the above commands
+    STOP_GCS_STREAM = "stop_gcs_stream"
+    ACTIVE_GCS = "active_gcs"  # `active_gcs atak` is an example
     ### ^^^^
     BITRATE = "bitrate"  # `bitrate 2500` is an example`
     RECORD = "record"  # record <Optional: file_name>` is an example
