@@ -23,13 +23,13 @@ sudo apt install -y python3-opencv
 sudo apt install -y python3-numpy
 ```
 ## GCS Selection
-pistreamer_v2 has the option to stream to QGroundControl as the GCS or ATAK. Generally speaking ATAK requires a MPEG-TS video format whereas GCS is a RDP stream. Since a pilot will only need one active GCS at a time, either `ffmpeg_command_atak` or `ffmpeg_command_qgc` will be actively streaming at a time.
+pistreamer_v2 has the option to stream to QGroundControl as the GCS or ATAK. Generally speaking ATAK requires a MPEG-TS video format whereas GCS is a RDP stream. Since a pilot will only need one active GCS at a time, either `ffmpeg_command_mpeg_ts` or `ffmpeg_command_rtp` will be the active streaming protocol at a time.
 
 ## Non-Daemon operation
 For normal (non-daemon) functionality run the script as below:
 
 ```
-python pistreamer_v2.py --gcs_ip={IP Address} --gcs_port={Port} --config_file="./477-Pi4.json"
+python pistreamer_v2.py --gcs_ip={IP Address} --gcs_port={Port} --streaming_protocol="rtp" --config_file="./477-Pi4.json"
 ```
 Once the app is running you can send a variety of commands (from a different session) by sending data over a socket defined by `SOCKET_HOST:CMD_SOCKET_PORT`. `_command_tester.py` has several examples you can uncomment and/or modify.
 

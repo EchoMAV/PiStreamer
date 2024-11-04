@@ -25,12 +25,12 @@ class CommandType(Enum):
     """
 
     ### vvvv Setting the IP, PORT, or HOST will start the active GCS type (QGC or ATAK)
-    GCS_IP = "gcs_ip"  # `qgcgcs_ip_ip 192.168.1.50` is an example
+    GCS_IP = "gcs_ip"  # `gcs_ip_ip 192.168.1.50` is an example
     GCS_PORT = "gcs_port"  # `gcs_port 5601` is an example
     GCS_HOST = "gcs_host"  # `gcs_host 192.168.1.50:5601` is an example
     START_GCS_STREAM = "start_gcs_stream"  # uses the ip/port set by the above commands
     STOP_GCS_STREAM = "stop_gcs_stream"
-    ACTIVE_GCS = "active_gcs"  # `active_gcs atak` is an example
+    STREAMING_PROTOCOL = "streaming_protocol"  # `streaming_protocol rtp` is an example
     ### ^^^^
     BITRATE = "bitrate"  # `bitrate 2500` is an example`
     RECORD = "record"  # record <Optional: file_name>` is an example
@@ -64,6 +64,6 @@ class TrackStatus(Enum):
     NONE = "none"
 
 
-class GCSType(Enum):
-    QGC = "qgc"  # QGroundControl
-    ATAK = "atak"  # Android (Tactical Assault/Team Awareness) Kit
+class StreamingProtocolType(Enum):
+    RTP = "rtp"  # Used for QGroundControl
+    MPEG_TS = "mpegts"  # Used for Android (Tactical Assault/Team Awareness) Kit
