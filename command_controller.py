@@ -9,8 +9,6 @@ from constants import (
     StreamingProtocolType,
     OutputCommandType,
     ZoomStatus,
-    OUTPUT_SOCKET_PORT,
-    OUTPUT_SOCKET_HOST,
     TrackStatus,
 )
 from validator import Validator
@@ -253,8 +251,7 @@ class CommandController:
         self.pi_streamer.picam2.set_controls({"ScalerCrop": new_crop})
 
         self.pi_streamer.command_service.send_data_out(
-            data=f"{OutputCommandType.ZOOM_LEVEL.value} {self.current_zoom}",
-            destination_kwargs={"host": OUTPUT_SOCKET_HOST, "port": OUTPUT_SOCKET_PORT},
+            data=f"{OutputCommandType.ZOOM_LEVEL.value} {self.current_zoom}"
         )
 
         if self.pi_streamer.verbose:

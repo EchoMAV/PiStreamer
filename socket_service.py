@@ -2,7 +2,13 @@
 
 from typing import Tuple, List
 from command_service import CommandService
-from constants import CMD_SOCKET_HOST, CMD_SOCKET_PORT, MAX_SOCKET_CONNECTIONS
+from constants import (
+    CMD_SOCKET_HOST,
+    CMD_SOCKET_PORT,
+    MAX_SOCKET_CONNECTIONS,
+    OUTPUT_SOCKET_HOST,
+    OUTPUT_SOCKET_PORT,
+)
 import socket
 import select
 
@@ -60,19 +66,17 @@ class SocketService(CommandService):
                         print(e)
         return ""
 
-    def send_data_out(self, data: str, destination_kwargs: dict) -> None:
+    def send_data_out(self, data: str) -> None:
         """
         Used to send data out over another host:port client socket connection.
         """
         try:
-            host = destination_kwargs.get("host")
-            port = destination_kwargs.get("port")
             _data = data.strip().encode()
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect((host, port))
+            client_socket.connect((OUTPUT_SOCKET_HOST, OUTPUT_SOCKET_PORT))
             client_socket.sendall(_data)
         except Exception as e:
-            print(f"{host}:{port} {e}")
+            print(f"{OUTPUT_SOCKET_HOST}:{OUTPUT_SOCKET_PORT} {e}")
         finally:
             client_socket.close()
 

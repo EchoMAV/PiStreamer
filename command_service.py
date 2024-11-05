@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from typing import Optional, Tuple, List, Any
+from typing import Tuple, List, Any
 
 """
 Commands are communicated to the pistreamer app through either through a dedicated socket host:port
@@ -29,7 +29,7 @@ class CommandService:
             )
         return commands
 
-    def send_data_out(self, data: str, destination_kwargs: dict) -> None:
+    def send_data_out(self, data: str) -> None:
         raise NotImplementedError()
 
     def get_pending_commands(self) -> List[Tuple[str, str]]:
