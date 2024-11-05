@@ -73,7 +73,7 @@ class StreamingProtocolType(Enum):
     MPEG_TS = "mpegts"  # Used for Android (Tactical Assault/Team Awareness) Kit
 
 
-class MessageProtocolType(Enum):
+class CommandProtocolType(Enum):
     """
     The mechanism in which commands and mavlink data are sent to the pistreamer and how
     the pistreamer sends output data back to listening processes.

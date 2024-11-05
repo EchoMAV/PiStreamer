@@ -82,25 +82,11 @@ class SocketService(CommandService):
         The first param in the tuple is the command type followed by the command value.
         If no commands are ready, then an empty list is returned.
         """
-        commands = []
         try:
             # Try reading from the socket
             data = self._read_socket()
-            if data:
-                decoded_data = str(data).split("\n")
-                decoded_data = [str(item).strip() for item in decoded_data if item]
-                print(f"Received {len(decoded_data)} total command(s): {decoded_data}")
-                for command in decoded_data:
-                    command_details = command.strip().split(" ")
-                    commands.append(
-                        (
-                            command_details[0].strip(),
-                            command_details[1].strip()
-                            if len(command_details) > 1
-                            else "",
-                        )
-                    )
+            return self._get_commands_from_data(data)
         except Exception as e:
             print(e)
 
-        return commands
+        return []

@@ -25,7 +25,7 @@ from constants import (
     MIN_ZOOM,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
-    MessageProtocolType,
+    CommandProtocolType,
     StreamingProtocolType,
     TrackStatus,
     ZoomStatus,
@@ -49,17 +49,17 @@ class PiStreamer2:
         verbose: bool = False,
         max_zoom: float = DEFAULT_MAX_ZOOM,
         streaming_protocol: str = StreamingProtocolType.RTP.value,
-        message_protocol: str = MessageProtocolType.ZEROMQ.value,
+        command_protocol: str = CommandProtocolType.ZEROMQ.value,
     ) -> None:
         # utilities
         from command_controller import CommandController
 
         self.command_controller: CommandController = None  # type: ignore # this is set later in _set_command_controller
 
-        if message_protocol == MessageProtocolType.ZEROMQ.value:
-            self.command_service: SocketService = SocketService()
-        elif message_protocol == MessageProtocolType.SOCKET.value:
-            self.command_service: ZeroMQService = ZeroMQService()  # type: ignore
+        if command_protocol == CommandProtocolType.ZEROMQ.value:
+            self.command_service: ZeroMQService = ZeroMQService()
+        elif command_protocol == CommandProtocolType.SOCKET.value:
+            self.command_service: SocketService = SocketService()  # type: ignore
         else:
             raise NotImplementedError(
                 "Only ZEROMQ and SOCKET message protocols are supported"
@@ -502,6 +502,12 @@ if __name__ == "__main__":
         default=StreamingProtocolType.RTP.value,
         help="Streaming protocol to use (RTP or MPEGTS)",
     )
+    parser.add_argument(
+        "--command_protocol",
+        type=str,
+        default=CommandProtocolType.ZEROMQ.value,
+        help="Command protocol to use for messages (socket or zeromq)",
+    )
     args = parser.parse_args()
     try:
         Validator(args)
@@ -518,6 +524,7 @@ if __name__ == "__main__":
         verbose=args.verbose,
         max_zoom=args.max_zoom,
         streaming_protocol=args.streaming_protocol,
+        command_protocol=args.command_protocol,
     )
     from command_controller import CommandController
 

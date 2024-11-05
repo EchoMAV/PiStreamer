@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
-from constants import CMD_SOCKET_PORT, CMD_SOCKET_HOST, CommandType, MessageProtocolType
+from constants import CMD_SOCKET_PORT, CMD_SOCKET_HOST, CommandType, CommandProtocolType
 import time
 import socket
+import zmq
+
 
 if __name__ == "__main__":
 
@@ -18,11 +20,22 @@ if __name__ == "__main__":
         finally:
             client_socket.close()
 
+    def _send_data_zeromq(command_type: CommandType, command_value: str = "") -> None:
+        context = zmq.Context()
+        socket = context.socket(zmq.PAIR)
+        socket.bind(f"tcp://*:{CMD_SOCKET_PORT}")
+        data = f"{command_type.value} {command_value}".strip()
+        socket.send_string(data)
+
     def _send_data(command_type: CommandType, command_value: str = "") -> None:
-        # change this to control which protocol to use
-        protocol = MessageProtocolType.ZEROMQ.value
-        if protocol == MessageProtocolType.ZEROMQ.value:
-            pass
+        ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ###  Change protocol as needed
+        protocol = CommandProtocolType.ZEROMQ.value
+        # protocol = MessageProtocolType.SOCKET.value
+        ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        if protocol == CommandProtocolType.ZEROMQ.value:
+            _send_data_zeromq(command_type, command_value)
         else:
             _send_data_socket(command_type, command_value)
 
