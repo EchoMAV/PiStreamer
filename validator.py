@@ -2,7 +2,7 @@ import os
 import ipaddress
 from typing import Any, Optional
 
-from constants import StreamingProtocolType
+from constants import CommandProtocolType, StreamingProtocolType
 
 
 class Validator:
@@ -20,6 +20,7 @@ class Validator:
         ret &= self.is_json_file(str(self.args.config_file))
         ret &= self.validate_max_zoom(float(self.args.max_zoom))
         ret &= self.validate_streaming_protocol(self.args.streaming_protocol)
+        ret &= self.validate_command_protocol(self.args.command_protocol)
         return ret
 
     def validate_ip(self, ip: str) -> bool:
@@ -57,6 +58,12 @@ class Validator:
         return streaming_protocol.lower() in [
             StreamingProtocolType.RTP.value,
             StreamingProtocolType.MPEG_TS.value,
+        ]
+
+    def validate_command_protocol(self, command_protocol: str) -> bool:
+        return command_protocol.lower() in [
+            CommandProtocolType.SOCKET.value,
+            CommandProtocolType.ZEROMQ.value,
         ]
 
     def is_json_file(str, file_name: str) -> bool:
