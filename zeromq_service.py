@@ -12,6 +12,8 @@ import zmq
 """
 Commands are communicated to the pistreamer app via a dedicated socket host:port and
 status and other data is returned back to the mavlink service at a different port.
+
+Unlike the socket_service.py, this service uses ZeroMQ for communication: https://zeromq.org/
 """
 
 
