@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 from time import time
-from typing import Literal, Optional, Union
-from command_service import CommandService
+from typing import Union
 from constants import (
     MIN_ZOOM,
     ZOOM_RATE,
@@ -253,10 +252,9 @@ class CommandController:
         # Set the updated ScalerCrop for the second stream
         self.pi_streamer.picam2.set_controls({"ScalerCrop": new_crop})
 
-        CommandService.send_data_out(
+        self.pi_streamer.command_service.send_data_out(
             data=f"{OutputCommandType.ZOOM_LEVEL.value} {self.current_zoom}",
-            host=OUTPUT_SOCKET_HOST,
-            port=OUTPUT_SOCKET_PORT,
+            destination_kwargs={"host": OUTPUT_SOCKET_HOST, "port": OUTPUT_SOCKET_PORT},
         )
 
         if self.pi_streamer.verbose:

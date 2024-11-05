@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from typing import Any, Optional
-from command_service import CommandService
 from ffmpeg_configs import (
     get_ffmpeg_command_mpeg_ts,
     get_ffmpeg_command_record,
@@ -26,13 +25,16 @@ from constants import (
     MIN_ZOOM,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
+    MessageProtocolType,
     StreamingProtocolType,
     TrackStatus,
     ZoomStatus,
 )
 from object_tracker import ObjectTracker
 from cam_utils import get_timestamp
+from socket_service import SocketService
 from validator import Validator
+from zeromq_service import ZeroMQService
 
 
 class PiStreamer2:
@@ -47,12 +49,22 @@ class PiStreamer2:
         verbose: bool = False,
         max_zoom: float = DEFAULT_MAX_ZOOM,
         streaming_protocol: str = StreamingProtocolType.RTP.value,
+        message_protocol: str = MessageProtocolType.ZEROMQ.value,
     ) -> None:
         # utilities
         from command_controller import CommandController
 
         self.command_controller: CommandController = None  # type: ignore # this is set later in _set_command_controller
-        self.command_service: CommandService = CommandService()
+
+        if message_protocol == MessageProtocolType.ZEROMQ.value:
+            self.command_service: SocketService = SocketService()
+        elif message_protocol == MessageProtocolType.SOCKET.value:
+            self.command_service: ZeroMQService = ZeroMQService()  # type: ignore
+        else:
+            raise NotImplementedError(
+                "Only ZEROMQ and SOCKET message protocols are supported"
+            )
+
         self.pid = 0
         self.verbose = verbose
         self.streaming_protocol = streaming_protocol

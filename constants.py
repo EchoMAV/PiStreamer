@@ -65,5 +65,19 @@ class TrackStatus(Enum):
 
 
 class StreamingProtocolType(Enum):
+    """
+    The format in which the camera feed is streamed via a ffmpeg process
+    """
+
     RTP = "rtp"  # Used for QGroundControl
     MPEG_TS = "mpegts"  # Used for Android (Tactical Assault/Team Awareness) Kit
+
+
+class MessageProtocolType(Enum):
+    """
+    The mechanism in which commands and mavlink data are sent to the pistreamer and how
+    the pistreamer sends output data back to listening processes.
+    """
+
+    SOCKET = "socket"
+    ZEROMQ = "zeromq"
