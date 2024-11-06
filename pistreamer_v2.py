@@ -10,6 +10,7 @@ from ffmpeg_configs import (
 import os
 from pathlib import Path
 from picamera2 import Picamera2
+import pyexiv2
 import cv2
 import numpy as np
 import time
@@ -24,6 +25,8 @@ from constants import (
     INIT_BBOX_COLOR,
     MEDIA_FILES_DIRECTORY,
     MIN_ZOOM,
+    NAMESPACE_PREFIX,
+    NAMESPACE_URI,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
     CommandProtocolType,
@@ -81,6 +84,9 @@ class PiStreamer2:
         # video metadata
         self.gps_data = MavlinkGPSData()
         self.misc_data = MavlinkMiscData()
+        pyexiv2.xmp.register_namespace(
+            NAMESPACE_URI, NAMESPACE_PREFIX
+        )  # Register the custom namespace for XMP
         # stabilize settings
         self.stabilize = stabilize
         self.prev_gray = None

@@ -17,6 +17,8 @@ OUTPUT_SOCKET_PORT = 54322
 MAX_SOCKET_CONNECTIONS = 3
 INIT_BBOX_COLOR = (128, 128, 128)  # Grey color in BGR
 ACTIVE_BBOX_COLOR = (0, 0, 255)  # Red color in BGR
+NAMESPACE_URI = "http://pix4d.com/camera/1.0/"
+NAMESPACE_PREFIX = "Camera"
 
 
 class CommandType(Enum):
@@ -107,10 +109,12 @@ class MavlinkGPSData:
 @dataclass
 class MavlinkMiscData:
     """
-    Defines the fields coming from MAVLink camera/position messages for both EXIF and KLV data.
+    Defines the fields coming from MAVLink camera/position like ATTITUDE messages for both EXIF and KLV data.
     """
 
-    pitch: float = 0.0  # Timestamp in milliseconds since system boot
-    roll: float = 0.0  # Latitude in 1e-7 degrees, e.g., 37.4243276° N = 374243276
-    camera_model: str = "Unknown"  # IMX477
-    focal_length: Tuple[int, int] = (0, 0)  # (50, 1) for 50mm
+    pitch: float = 0.0  # radians (positive is up, negative is down)
+    roll: float = (
+        0.0  # radians (positive is right side down, negative is left side down)
+    )
+    camera_model: str = "Unknown"  # i.e. IMX477
+    focal_length: Tuple[int, int] = (0, 0)  # i.e (50, 1) for 50mm

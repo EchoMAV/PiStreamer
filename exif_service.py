@@ -4,6 +4,7 @@ from constants import MavlinkGPSData, MavlinkMiscData
 import piexif
 from PIL import Image
 import pyexiv2
+import math
 
 
 class EXIFService:
@@ -75,7 +76,6 @@ class EXIFService:
 
     def _get_exif_misc_data(self) -> dict:
         return {
-            piexif.ImageIFD.Model: self.misc_data.camera_model.encode(),
             piexif.ExifIFD.FocalLength: self.misc_data.focal_length,
             piexif.ExifIFD.DateTimeOriginal: self.current_datetime.encode(),
             piexif.ExifIFD.SubSecTimeOriginal: str(self.current_datetime_ms).encode(),
@@ -88,6 +88,7 @@ class EXIFService:
         exif_dict = {
             "GPS": self._get_exif_gps_data(),
             "Exif": self._get_exif_misc_data(),
+            "0th": {piexif.ImageIFD.Model: self.misc_data.camera_model.encode()},
         }
         return piexif.dump(exif_dict)
 
@@ -96,26 +97,27 @@ class EXIFService:
         Adds XMP metadata for yaw, pitch, and roll since this is not supported by EXIF
         but still common for photogrammetry software.
         """
+
         metadata = pyexiv2.ImageMetadata(self.file_name)
+        # import pdb
+        # pdb.set_trace()
         metadata.read()
 
         # Set XMP tags for misc GPS/camera data
-        metadata["Xmp.Camera.Yaw"] = (
-            self.gps_data.cog / 100.0
-        )  # Course over ground comes from GPS as centidegrees
-        metadata["Xmp.Camera.Pitch"] = self.misc_data.pitch
-        metadata["Xmp.Camera.Roll"] = self.misc_data.roll
-        metadata["Xmp.Camera.GPSFixType"] = self.gps_data.fix_type
-        metadata["Xmp.Camera.SatellitesVisible"] = self.gps_data.satellites_visible
-        metadata["Xmp.Camera.GPSHDOP"] = self.gps_data.eph / 100.0  # Convert cm to m
-        metadata["Xmp.Camera.GPSVDOP"] = self.gps_data.epv / 100.0  # Convert cm to m
-        metadata["Xmp.Camera.GroundSpeed"] = (
-            self.gps_data.vel / 100.0
-        )  # Convert cm/s to m/s
+        metadata[
+            "Xmp.Camera.RigRelatives"
+        ] = f"{self.gps_data.cog * 0.01 * (math.pi / 180)}, {self.misc_data.pitch}, {self.misc_data.roll}"
+        metadata[
+            "Xmp.Camera.GPSXYAccuracy"
+        ] = f"{self.gps_data.eph / 100.0}"  # Convert cm to m
+        metadata[
+            "Xmp.Camera.GPSZAccuracy"
+        ] = f"{self.gps_data.epv / 100.0}"  # Convert cm to m
 
         metadata.write()  # Write XMP data to the image
 
     def add_metadata(self) -> None:
+        print(f"Adding metadata to {self.file_name}")
         if not self.gps_data and not self.misc_data:
             print("No GPS and Camera data to add")
             return
@@ -123,4 +125,5 @@ class EXIFService:
         image.save(self.file_name, exif=self._get_exif_bytes())
 
         # Add XMP metadata for pitch, roll etc.
+
         self._add_xmp_data()
