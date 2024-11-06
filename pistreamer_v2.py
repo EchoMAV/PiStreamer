@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from typing import Any, Optional
+from exif_service import EXIFService
 from ffmpeg_configs import (
     get_ffmpeg_command_mpeg_ts,
     get_ffmpeg_command_record,
@@ -9,6 +10,7 @@ from ffmpeg_configs import (
 import os
 from pathlib import Path
 from picamera2 import Picamera2
+import pyexiv2
 import cv2
 import numpy as np
 import time
@@ -23,9 +25,13 @@ from constants import (
     INIT_BBOX_COLOR,
     MEDIA_FILES_DIRECTORY,
     MIN_ZOOM,
+    NAMESPACE_PREFIX,
+    NAMESPACE_URI,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
     CommandProtocolType,
+    MavlinkGPSData,
+    MavlinkMiscData,
     StreamingProtocolType,
     TrackStatus,
     ZoomStatus,
@@ -75,6 +81,12 @@ class PiStreamer2:
         self.original_size = (0, 0)
         self.recording_start_time = 0
         self.max_zoom = max_zoom
+        # video metadata
+        self.gps_data = MavlinkGPSData()
+        self.misc_data = MavlinkMiscData()
+        pyexiv2.xmp.register_namespace(
+            NAMESPACE_URI, NAMESPACE_PREFIX
+        )  # Register the custom namespace for XMP
         # stabilize settings
         self.stabilize = stabilize
         self.prev_gray = None
@@ -308,6 +320,9 @@ class PiStreamer2:
             self.command_controller.set_zoom(_original_zoom)
             self.picam2.start()
 
+        # Lastly update the photo with the exif data
+        EXIFService(self.gps_data, self.misc_data, file_name).add_metadata()
+
     def _format_duration(self, seconds: int) -> str:
         """Convert a duration in seconds to a minutes:seconds format."""
         minutes = seconds // 60
@@ -350,7 +365,8 @@ class PiStreamer2:
     def _read_and_process_commands(self) -> None:
         commands = self.command_service.get_pending_commands()
         for command in commands:
-            print(f"Processing command `{command}`")
+            if self.verbose:
+                print(f"Processing command `{command}`")
             try:
                 self.command_controller.handle_command(
                     command_type=command[0], command_value=command[1]

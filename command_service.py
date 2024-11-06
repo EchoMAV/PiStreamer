@@ -18,13 +18,28 @@ class CommandService:
 
         decoded_data = str(data).split("\n")
         decoded_data = [str(item).strip() for item in decoded_data if item]
-        print(f"Received {len(decoded_data)} total command(s): {decoded_data}")
+
         for command in decoded_data:
-            command_details = command.strip().split(" ")
+            command = command.strip()
+            first_space_index = command.find(" ")
+
+            if first_space_index != -1:
+                command_type = command[
+                    :first_space_index
+                ].strip()  # Part before the first space
+                command_value = command[
+                    first_space_index + 1 :
+                ].strip()  # Rest of the string after the first space
+            else:
+                command_type = (
+                    command.strip()
+                )  # No space found, entire string is command_type
+                command_value = ""
+
             commands.append(
                 (
-                    command_details[0].strip(),
-                    command_details[1].strip() if len(command_details) > 1 else "",
+                    command_type,
+                    command_value,
                 )
             )
         return commands

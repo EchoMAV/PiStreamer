@@ -1,5 +1,6 @@
-from typing import Final
+from typing import Final, Tuple
 from enum import Enum
+from dataclasses import dataclass
 
 FRAMERATE: Final = 30
 MIN_ZOOM: Final = 1.0
@@ -16,6 +17,8 @@ OUTPUT_SOCKET_PORT = 54322
 MAX_SOCKET_CONNECTIONS = 3
 INIT_BBOX_COLOR = (128, 128, 128)  # Grey color in BGR
 ACTIVE_BBOX_COLOR = (0, 0, 255)  # Red color in BGR
+NAMESPACE_URI = "http://pix4d.com/camera/1.0/"
+NAMESPACE_PREFIX = "Camera"
 
 
 class CommandType(Enum):
@@ -41,6 +44,8 @@ class CommandType(Enum):
     STABILIZE = "stabilize"
     INIT_TRACKING_POI = "init_tracking_poi"  # `init_tracking_poi x,y` is an example
     STOP_TRACKING = "stop_tracking"
+    GPS_DATA = "gps_data"  # `gps_data '{"lat": 359686990, "lon": -839290440, "alt": 276, "eph": 1, "epv": 1, "vel": 0, "cog": 0, "fix_type": 2, "satellites_visible": 10, "time_usec": 1730920262680000}'` is an example
+    MISC_DATA = "misc_data"  # `misc_data '{"pitch": 0.1, "roll": 0.02, "camera_model": "IMX477", "focal_length": [50, 1]}'` is an example
 
 
 class OutputCommandType(Enum):
@@ -81,3 +86,37 @@ class CommandProtocolType(Enum):
 
     SOCKET = "socket"
     ZEROMQ = "zeromq"
+
+
+@dataclass
+class MavlinkGPSData:
+    """
+    Defines the fields coming from a MAVLink GPS_RAW_INT messages for both EXIF and KLV data.
+    Note, EXIF doesn't support all of these fields but KLV and XMP can.
+    See https://data.pix4d.com/misc/KB/documents/Exif_tags_for_project_creation-Pix4D_products.pdf
+    """
+
+    lat: int = 0  # Latitude in 1e-7 degrees, e.g., 37.4243276° N = 374243276
+    lon: int = 0  # Longitude in 1e-7 degrees, e.g., -122.071482° W = -122071482
+    alt: int = 0  # Altitude in millimeters above mean sea level
+    eph: int = 0  # GPS HDOP horizontal dilution of position in cm (higher is worse)
+    epv: int = 0  # GPS VDOP vertical dilution of position in cm (higher is worse)
+    vel: int = 0  # GPS ground speed in cm/s
+    cog: int = 0  # Course over ground (heading) in centi-degrees
+    fix_type: int = 0  # GPS fix type, e.g., 0: no fix, 1: 2D fix, 2: 3D fix
+    satellites_visible: int = 0  # Number of visible satellites
+    time_usec: int = 0  # Timestamp (microseconds since UNIX epoch)
+
+
+@dataclass
+class MavlinkMiscData:
+    """
+    Defines the fields coming from MAVLink camera/position like ATTITUDE messages for both EXIF and KLV data.
+    """
+
+    pitch: float = 0.0  # radians (positive is up, negative is down)
+    roll: float = (
+        0.0  # radians (positive is right side down, negative is left side down)
+    )
+    camera_model: str = "Unknown"  # i.e. IMX477
+    focal_length: Tuple[int, int] = (0, 0)  # i.e (50, 1) for 50mm
