@@ -44,10 +44,8 @@ class CommandType(Enum):
     STABILIZE = "stabilize"
     INIT_TRACKING_POI = "init_tracking_poi"  # `init_tracking_poi x,y` is an example
     STOP_TRACKING = "stop_tracking"
-    GPS_DATA = (
-        "gps_data"  # `gps_data "json encoded string of MavlinkGPSData"` is an example
-    )
-    MISC_DATA = "misc_data"  # `misc_data "json encoded string of MavlinkMiscData"` is an example
+    GPS_DATA = "gps_data"  # `gps_data '{"lat": 359686990, "lon": -839290440, "alt": 276, "eph": 1, "epv": 1, "vel": 0, "cog": 0, "fix_type": 2, "satellites_visible": 10, "time_usec": 1730920262680000}'` is an example
+    MISC_DATA = "misc_data"  # `misc_data '{"pitch": 0.1, "roll": 0.02, "camera_model": "IMX477", "focal_length": [50, 1]}'` is an example
 
 
 class OutputCommandType(Enum):

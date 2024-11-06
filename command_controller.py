@@ -81,7 +81,7 @@ class CommandController:
                     **json.loads(command_value)
                 )
             except Exception as e:
-                raise Exception(f"Invalid GPS data command : {e}")
+                raise Exception(f"Invalid MISC data command : {e}")
         elif command_type == CommandType.STABILIZE.value:
             try:
                 stab_value = (
