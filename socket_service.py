@@ -73,10 +73,10 @@ class SocketService(CommandService):
         try:
             _data = data.strip().encode()
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect((OUTPUT_SOCKET_HOST, OUTPUT_SOCKET_PORT))
+            client_socket.connect((CMD_SOCKET_HOST, OUTPUT_SOCKET_PORT))
             client_socket.sendall(_data)
         except Exception as e:
-            print(f"{OUTPUT_SOCKET_HOST}:{OUTPUT_SOCKET_PORT} {e}")
+            print(f"{CMD_SOCKET_HOST}:{OUTPUT_SOCKET_PORT} {e}")
         finally:
             client_socket.close()
 

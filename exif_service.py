@@ -99,8 +99,6 @@ class EXIFService:
         """
 
         metadata = pyexiv2.ImageMetadata(self.file_name)
-        # import pdb
-        # pdb.set_trace()
         metadata.read()
 
         # Set XMP tags for misc GPS/camera data

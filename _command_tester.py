@@ -37,11 +37,11 @@ if __name__ == "__main__":
 
         zeromq_socket.close()
 
-    def _send_data(commands: list[tuple]) -> None:
+    def _send_data(commands: List[Tuple[Any, Any]]) -> None:
         ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ###  Change protocol as needed
-        protocol = CommandProtocolType.ZEROMQ.value
-        # protocol = MessageProtocolType.SOCKET.value
+        # protocol = CommandProtocolType.ZEROMQ.value
+        protocol = CommandProtocolType.SOCKET.value
         ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         print(f"Sending {len(commands)} commands via {protocol}")
