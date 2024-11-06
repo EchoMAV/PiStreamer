@@ -365,7 +365,8 @@ class PiStreamer2:
     def _read_and_process_commands(self) -> None:
         commands = self.command_service.get_pending_commands()
         for command in commands:
-            print(f"Processing command `{command}`")
+            if self.verbose:
+                print(f"Processing command `{command}`")
             try:
                 self.command_controller.handle_command(
                     command_type=command[0], command_value=command[1]

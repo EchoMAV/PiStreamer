@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
+import json
 from time import time
 from typing import Union
 from constants import (
     MIN_ZOOM,
     ZOOM_RATE,
     CommandType,
+    MavlinkGPSData,
+    MavlinkMiscData,
     StreamingProtocolType,
     OutputCommandType,
     ZoomStatus,
@@ -67,6 +70,18 @@ class CommandController:
                 x_center=int(x_center), y_center=int(y_center)
             )
             self.pi_streamer.track_status = TrackStatus.INIT.value
+        elif command_type == CommandType.GPS_DATA.value:
+            try:
+                self.pi_streamer.gps_data = MavlinkGPSData(**json.loads(command_value))
+            except Exception as e:
+                raise Exception(f"Invalid GPS data command : {e}")
+        elif command_type == CommandType.MISC_DATA.value:
+            try:
+                self.pi_streamer.misc_data = MavlinkMiscData(
+                    **json.loads(command_value)
+                )
+            except Exception as e:
+                raise Exception(f"Invalid GPS data command : {e}")
         elif command_type == CommandType.STABILIZE.value:
             try:
                 stab_value = (

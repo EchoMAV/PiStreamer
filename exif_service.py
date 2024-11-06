@@ -27,8 +27,8 @@ class EXIFService:
         decimal_degrees = gps_coord / 1e7
 
         # Extract degrees, minutes, and seconds
-        degrees = int(decimal_degrees)
-        minutes_decimal = (decimal_degrees - degrees) * 60
+        degrees = abs(int(decimal_degrees))  # Use absolute value for degrees
+        minutes_decimal = (abs(decimal_degrees) - degrees) * 60
         minutes = int(minutes_decimal)
         seconds = (minutes_decimal - minutes) * 60
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 from typing import Any, List, Tuple
 from constants import CMD_SOCKET_PORT, CMD_SOCKET_HOST, CommandType, CommandProtocolType
 import time
@@ -40,8 +41,8 @@ if __name__ == "__main__":
     def _send_data(commands: List[Tuple[Any, Any]]) -> None:
         ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ###  Change protocol as needed
-        # protocol = CommandProtocolType.ZEROMQ.value
-        protocol = CommandProtocolType.SOCKET.value
+        protocol = CommandProtocolType.ZEROMQ.value
+        # protocol = CommandProtocolType.SOCKET.value
         ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         print(f"Sending {len(commands)} commands via {protocol}")
@@ -57,16 +58,50 @@ if __name__ == "__main__":
     # commands.append((CommandType.BITRATE,"2500"))
 
     #######-####### ZOOM #######-#######
-    commands.append((CommandType.ZOOM, "2.0"))
-    commands.append((CommandType.ZOOM, "3.5"))
+    # commands.append((CommandType.ZOOM, "2.0"))
     # commands.append((CommandType.MAX_ZOOM,"8.0"))
     # commands.append((CommandType.ZOOM,"in"))
     # commands.append((CommandType.ZOOM,"out"))
     # commands.append((CommandType.ZOOM,"stop"))
 
+    #######-####### EXIF/KLV #######-#######
+    commands.append(
+        (
+            CommandType.GPS_DATA,
+            json.dumps(
+                {
+                    "lat": 359686990,
+                    "lon": -839290440,
+                    "alt": 276,
+                    "eph": 1,
+                    "epv": 1,
+                    "vel": 0,
+                    "cog": 0,
+                    "fix_type": 2,
+                    "satellites_visible": 10,
+                    "time_usec": 1730920262680000,
+                }
+            ),
+        )
+    )
+
+    commands.append(
+        (
+            CommandType.MISC_DATA,
+            json.dumps(
+                {
+                    "pitch": 0.1,
+                    "roll": 0.02,
+                    "camera_model": "IMX477",
+                    "focal_length": (50, 1),
+                }
+            ),
+        )
+    )
+
     #######-####### PHOTO #######-#######
     commands.append((CommandType.TAKE_PHOTO, ""))
-    commands.append((CommandType.TAKE_PHOTO, ""))
+    # commands.append((CommandType.TAKE_PHOTO, ""))
 
     #######-####### QGC #######-#######
     # commands.append((CommandType.GCS_IP,"192.168.1.124"))

@@ -44,6 +44,10 @@ class CommandType(Enum):
     STABILIZE = "stabilize"
     INIT_TRACKING_POI = "init_tracking_poi"  # `init_tracking_poi x,y` is an example
     STOP_TRACKING = "stop_tracking"
+    GPS_DATA = (
+        "gps_data"  # `gps_data "json encoded string of MavlinkGPSData"` is an example
+    )
+    MISC_DATA = "misc_data"  # `misc_data "json encoded string of MavlinkMiscData"` is an example
 
 
 class OutputCommandType(Enum):
