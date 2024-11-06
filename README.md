@@ -23,6 +23,7 @@ sudo apt install -y python3-opencv
 sudo apt install -y python3-numpy
 sudo apt install -y libzmq3-dev
 sudo apt install -y python3-zmq
+sudo apt install -y python3-piexif
 ```
 ## GCS Selection
 pistreamer_v2 has the option to stream to QGroundControl as the GCS or ATAK. Generally speaking ATAK requires a MPEG-TS video format whereas GCS is a RDP stream. Since a pilot will only need one active GCS at a time, either `ffmpeg_command_mpeg_ts` or `ffmpeg_command_rtp` will be the active streaming protocol at a time.

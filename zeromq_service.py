@@ -46,10 +46,17 @@ class ZeroMQService(CommandService):
         self.send_socket.send_string(data)
 
     def get_pending_commands(self) -> List[Tuple[str, str]]:
+        commands = []
         try:
-            data = self.receive_socket.recv_string(zmq.NOBLOCK)
-            return self._get_commands_from_data(data)
+            # We want to get all available messages in the queue
+            while True:
+                data = self.receive_socket.recv_string(zmq.NOBLOCK)
+                # zeromq only gets 1 command at a time here
+                command = self._get_commands_from_data(data)[0]
+                commands.append(command)
         except zmq.Again:
             # No message available, continue processing
             pass
-        return []
+        except Exception as e:
+            print(f"Error receiving data: {e}")
+        return commands

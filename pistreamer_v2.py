@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from typing import Any, Optional
+from exif_service import EXIFService
 from ffmpeg_configs import (
     get_ffmpeg_command_mpeg_ts,
     get_ffmpeg_command_record,
@@ -75,6 +76,8 @@ class PiStreamer2:
         self.original_size = (0, 0)
         self.recording_start_time = 0
         self.max_zoom = max_zoom
+        # video metadata
+        self.gps_data = {}
         # stabilize settings
         self.stabilize = stabilize
         self.prev_gray = None
@@ -307,6 +310,9 @@ class PiStreamer2:
             self.picam2.configure(self.streaming_config)
             self.command_controller.set_zoom(_original_zoom)
             self.picam2.start()
+
+        # Lastly update the photo with the exif data
+        EXIFService(self.gps_data, file_name).add_exif_metadata()
 
     def _format_duration(self, seconds: int) -> str:
         """Convert a duration in seconds to a minutes:seconds format."""

@@ -1,5 +1,6 @@
-from typing import Final
+from typing import Final, Tuple, Union
 from enum import Enum
+from dataclasses import dataclass
 
 FRAMERATE: Final = 30
 MIN_ZOOM: Final = 1.0
@@ -81,3 +82,15 @@ class CommandProtocolType(Enum):
 
     SOCKET = "socket"
     ZEROMQ = "zeromq"
+
+
+@dataclass
+class ExifDataGPS:
+    GPSLatitude: str
+    GPSLatitudeRef: str
+    GPSLongitude: str
+    GPSLongitudeRef: str
+    GPSAltitude: Union[int, float]
+    GPSAltitudeRef: int  # 0 = above sea level, 1 = below
+    GPSDateStamp: str  # format `2024:11:05``
+    GPSTimeStamp: Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]
