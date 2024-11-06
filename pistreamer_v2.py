@@ -27,6 +27,8 @@ from constants import (
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
     CommandProtocolType,
+    MavlinkGPSData,
+    MavlinkMiscData,
     StreamingProtocolType,
     TrackStatus,
     ZoomStatus,
@@ -77,7 +79,8 @@ class PiStreamer2:
         self.recording_start_time = 0
         self.max_zoom = max_zoom
         # video metadata
-        self.gps_data = {}
+        self.gps_data = MavlinkGPSData()
+        self.misc_data = MavlinkMiscData()
         # stabilize settings
         self.stabilize = stabilize
         self.prev_gray = None
@@ -312,7 +315,7 @@ class PiStreamer2:
             self.picam2.start()
 
         # Lastly update the photo with the exif data
-        EXIFService(self.gps_data, file_name).add_exif_metadata()
+        EXIFService(self.gps_data, self.misc_data, file_name).add_metadata()
 
     def _format_duration(self, seconds: int) -> str:
         """Convert a duration in seconds to a minutes:seconds format."""

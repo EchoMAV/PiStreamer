@@ -1,4 +1,4 @@
-from typing import Final, Tuple, Union
+from typing import Final, Tuple
 from enum import Enum
 from dataclasses import dataclass
 
@@ -85,12 +85,32 @@ class CommandProtocolType(Enum):
 
 
 @dataclass
-class ExifDataGPS:
-    GPSLatitude: str
-    GPSLatitudeRef: str
-    GPSLongitude: str
-    GPSLongitudeRef: str
-    GPSAltitude: Union[int, float]
-    GPSAltitudeRef: int  # 0 = above sea level, 1 = below
-    GPSDateStamp: str  # format `2024:11:05``
-    GPSTimeStamp: Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]
+class MavlinkGPSData:
+    """
+    Defines the fields coming from a MAVLink GPS_RAW_INT messages for both EXIF and KLV data.
+    Note, EXIF doesn't support all of these fields but KLV and XMP can.
+    See https://data.pix4d.com/misc/KB/documents/Exif_tags_for_project_creation-Pix4D_products.pdf
+    """
+
+    lat: int = 0  # Latitude in 1e-7 degrees, e.g., 37.4243276° N = 374243276
+    lon: int = 0  # Longitude in 1e-7 degrees, e.g., -122.071482° W = -122071482
+    alt: int = 0  # Altitude in millimeters above mean sea level
+    eph: int = 0  # GPS HDOP horizontal dilution of position in cm (higher is worse)
+    epv: int = 0  # GPS VDOP vertical dilution of position in cm (higher is worse)
+    vel: int = 0  # GPS ground speed in cm/s
+    cog: int = 0  # Course over ground (heading) in centi-degrees
+    fix_type: int = 0  # GPS fix type, e.g., 0: no fix, 1: 2D fix, 2: 3D fix
+    satellites_visible: int = 0  # Number of visible satellites
+    time_usec: int = 0  # Timestamp (microseconds since UNIX epoch)
+
+
+@dataclass
+class MavlinkMiscData:
+    """
+    Defines the fields coming from MAVLink camera/position messages for both EXIF and KLV data.
+    """
+
+    pitch: float = 0.0  # Timestamp in milliseconds since system boot
+    roll: float = 0.0  # Latitude in 1e-7 degrees, e.g., 37.4243276° N = 374243276
+    camera_model: str = "Unknown"  # IMX477
+    focal_length: Tuple[int, int] = (0, 0)  # (50, 1) for 50mm
