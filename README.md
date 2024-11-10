@@ -26,8 +26,8 @@ sudo apt install -y python3-zmq
 sudo apt install -y python3-piexif
 sudo apt install -y python3-py3exiv2
 ```
-## GCS Selection
-pistreamer_v2 has the option to stream to QGroundControl as the GCS or ATAK. Generally speaking ATAK requires a MPEG-TS video format whereas GCS is a RDP stream. Since a pilot will only need one active GCS at a time, either `ffmpeg_command_mpeg_ts` or `ffmpeg_command_rtp` will be the active streaming protocol at a time.
+## Protocol Selection
+pistreamer_v2 has the option to stream using RTP or MPEG-TS protocols. The reason for this is that QGroundControl/Mission Planner are observed to perform better with RTP streams, whereas ATAK performs better with an MPEG-TS stream. The parameter `streaming_protocol` is used to control the output protocol format.
 
 ## Non-Daemon operation
 For normal (non-daemon) functionality run the script as below:
@@ -55,7 +55,7 @@ _send_data(command_type=CommandType.STREAMING_PROTOCOL, command_value="mpegts") 
 ```
 
 ## Service operation
-To run the streamer and all ffmpeg processes in the background configure the script to be a service on the rpi.
+To run the streamer and all ffmpeg processes in the background configure the script to start as a service on the rpi.
 
 ## Stabilization
 Pass the flag `--stabilization` to the command line to achieve software image stabilization through opencv. Due to the computational overhead of stabilization, a significant FPS penalty is incurred at all resolutions. See the spec table below to evaluate the best options.
@@ -66,7 +66,7 @@ The command_type `record` will simultaneously record the RTP upsink video frames
 ## Camera configuration file
 A camera tuning json file is expected. Starting points for these files for the IMX477 sensor: https://github.com/raspberrypi/libcamera/blob/main/src/ipa/rpi/vc4/data/imx477.json and https://www.arducam.com/wp-content/uploads/2023/12/Arducam-477M-Pi4.json
 
-## IMX477 EchoLITE SBX Performance Specs
+## IMX477 EchoPilot SBX Performance Specs
 Below are bench tested results of the IMX477 functioning at various resolutions and capture modes. Captured video and photo files are saved to the RPi filesystem whilst the streaming destination a RTP feed to a configuration IP and port.
 
 ### Resolutions & Aspect Ratios
