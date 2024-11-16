@@ -21,7 +21,6 @@ import sys
 from constants import (
     DEFAULT_CONFIG_PATH,
     DEFAULT_MAX_ZOOM,
-    FRAMERATE,
     INIT_BBOX_COLOR,
     MEDIA_FILES_DIRECTORY,
     MIN_ZOOM,
@@ -29,6 +28,7 @@ from constants import (
     NAMESPACE_URI,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
+    FRAMERATE,
     CommandProtocolType,
     MavlinkGPSData,
     MavlinkMiscData,
@@ -81,6 +81,9 @@ class PiStreamer2:
         self.original_size = (0, 0)
         self.recording_start_time = 0
         self.max_zoom = max_zoom
+        self.zoom_x_pos = 0
+        self.zoom_y_pos = 0
+        self.has_zoomed = False
         # video metadata
         self.gps_data = MavlinkGPSData()
         self.misc_data = MavlinkMiscData()
@@ -311,7 +314,7 @@ class PiStreamer2:
             self.picam2.start()
 
         if not file_name:
-            file_name = f"./{MEDIA_FILES_DIRECTORY}/{get_timestamp()}.jpg"
+            file_name = str(f"./{MEDIA_FILES_DIRECTORY}/{get_timestamp()}.jpg")
         self.picam2.capture_file(file_name)
 
         if not is_same_resolution:
@@ -327,9 +330,38 @@ class PiStreamer2:
         """Convert a duration in seconds to a minutes:seconds format."""
         minutes = seconds // 60
         remaining_seconds = seconds % 60
-        return f"{minutes}:{remaining_seconds:02d}"
+        return str(f"{minutes}:{remaining_seconds:02d}")
 
-    def _draw_rec(self, frame: np.ndarray) -> np.ndarray:
+    def _draw_zoom_level(self, frame: np.ndarray) -> np.ndarray:
+        """
+        Paints zoom level near the center of the frame while zoom is changing.
+        """
+        text = f"{self.command_controller.current_zoom:.2f}x"
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.75
+        color = (255, 255, 255)
+        thickness = 2
+        line_type = cv2.LINE_AA
+        # Get the text size to calculate the center position
+        text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
+        if not self.zoom_x_pos:
+            self.zoom_x_pos = (self.resolution[0] - text_size[0]) // 2
+        if not self.zoom_y_pos:
+            self.zoom_y_pos = ((self.resolution[1] - text_size[0]) // 2) - 150
+        cv2.putText(
+            frame,
+            text,
+            (self.zoom_x_pos, self.zoom_y_pos),
+            font,
+            font_scale,
+            color,
+            thickness,
+            line_type,
+        )
+        frame_yuv = cv2.cvtColor(frame, cv2.COLOR_RGB2YUV_I420)
+        return frame_yuv.tobytes()
+
+    def _draw_rec(self, frame: np.ndarray) -> bytes:
         """
         Paints "REC" on the top of streams (but not the saved video).
         """
@@ -342,13 +374,13 @@ class PiStreamer2:
         thickness = 2
         line_type = cv2.LINE_AA
         # Get the text size to calculate the center position
-        text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
-        text_x = (frame.shape[1] - text_size[0]) // 2  # Centered along width
-        text_y = text_size[1] + 10  # Just below the top
+        text_x = 11  # Left margin
+        text_y = frame.shape[0] - 11  # Bottom margin
         cv2.putText(
             frame, text, (text_x, text_y), font, font_scale, color, thickness, line_type
         )
-        return frame
+        frame_yuv = cv2.cvtColor(frame, cv2.COLOR_RGB2YUV_I420)
+        return frame_yuv.tobytes()
 
     def _close_ffmpeg_processes(self) -> None:
         self.stop_recording()
@@ -447,24 +479,30 @@ class PiStreamer2:
                 # Convert the frame back to YUV format before sending to FFmpeg
                 frame_8bit = cv2.convertScaleAbs(frame)
                 frame_yuv = cv2.cvtColor(frame_8bit, cv2.COLOR_RGB2YUV_I420)
-                pure_frame_yuv_bytes = frame_yuv.tobytes()
-                modified_frame_yuv_bytes = None
+                frame_yuv_bytes = frame_yuv.tobytes()
 
-                # Forward the stabilized frame to rtp
                 if self.is_recording:
-                    # video should not have 'REC' appearing in the frame
-                    self.ffmpeg_process_record.stdin.write(pure_frame_yuv_bytes)  # type: ignore
-                    frame_8bit_rec = self._draw_rec(frame_8bit)
-                    frame_yuv = cv2.cvtColor(frame_8bit_rec, cv2.COLOR_RGB2YUV_I420)
-                    modified_frame_yuv_bytes = frame_yuv.tobytes()
+                    # The raw video that is saved should not have 'REC' appearing in the frame
+                    self.ffmpeg_process_record.stdin.write(frame_yuv_bytes)  # type: ignore
 
-                if not modified_frame_yuv_bytes:
-                    modified_frame_yuv_bytes = pure_frame_yuv_bytes
+                # Draw zoom level on the streaming frame
+                if not self.command_controller.zoom_status == ZoomStatus.STOP.value:
+                    frame_yuv_bytes = self._draw_zoom_level(frame_8bit)
+                    self.has_zoomed = True
+                    self.zoom_count = 0
+                # the below code makes it so that when the zooming stops, the current zoom level is displayed for a few frames
+                elif self.has_zoomed and self.zoom_count < FRAMERATE:
+                    frame_yuv_bytes = self._draw_zoom_level(frame_8bit)
+                    self.zoom_count += 1
+                elif self.has_zoomed and self.zoom_count >= FRAMERATE:
+                    self.has_zoomed = False
 
                 if self.is_rtp_streaming:
-                    self.ffmpeg_process_rtp.stdin.write(modified_frame_yuv_bytes)  # type: ignore
+                    self.ffmpeg_process_rtp.stdin.write(frame_yuv_bytes)  # type: ignore
                 elif self.is_mpeg_ts_streaming:
-                    self.ffmpeg_process_mpeg_ts.stdin.write(modified_frame_yuv_bytes)  # type: ignore
+                    if self.is_recording:
+                        frame_yuv_bytes = self._draw_rec(frame_8bit)
+                    self.ffmpeg_process_mpeg_ts.stdin.write(frame_yuv_bytes)  # type: ignore
 
         finally:
             self.stop_and_clean_all()

@@ -60,47 +60,47 @@ if __name__ == "__main__":
     #######-####### ZOOM #######-#######
     # commands.append((CommandType.ZOOM, "2.0"))
     # commands.append((CommandType.MAX_ZOOM,"8.0"))
-    # commands.append((CommandType.ZOOM,"in"))
+    commands.append((CommandType.ZOOM, "in"))
     # commands.append((CommandType.ZOOM,"out"))
     # commands.append((CommandType.ZOOM,"stop"))
 
     #######-####### EXIF/KLV #######-#######
-    commands.append(
-        (
-            CommandType.GPS_DATA,
-            json.dumps(
-                {
-                    "lat": 359686990,
-                    "lon": -839290440,
-                    "alt": 276,
-                    "eph": 1,
-                    "epv": 1,
-                    "vel": 0,
-                    "cog": 0,
-                    "fix_type": 2,
-                    "satellites_visible": 10,
-                    "time_usec": 1730920262680000,
-                }
-            ),
-        )
-    )
+    # commands.append(
+    #     (
+    #         CommandType.GPS_DATA,
+    #         json.dumps(
+    #             {
+    #                 "lat": 359686990,
+    #                 "lon": -839290440,
+    #                 "alt": 276,
+    #                 "eph": 1,
+    #                 "epv": 1,
+    #                 "vel": 0,
+    #                 "cog": 0,
+    #                 "fix_type": 2,
+    #                 "satellites_visible": 10,
+    #                 "time_usec": 1730920262680000,
+    #             }
+    #         ),
+    #     )
+    # )
 
-    commands.append(
-        (
-            CommandType.MISC_DATA,
-            json.dumps(
-                {
-                    "pitch": 0.1,
-                    "roll": 0.02,
-                    "camera_model": "IMX477",
-                    "focal_length": (50, 1),
-                }
-            ),
-        )
-    )
+    # commands.append(
+    #     (
+    #         CommandType.MISC_DATA,
+    #         json.dumps(
+    #             {
+    #                 "pitch": 0.1,
+    #                 "roll": 0.02,
+    #                 "camera_model": "IMX477",
+    #                 "focal_length": (50, 1),
+    #             }
+    #         ),
+    #     )
+    # )
 
     #######-####### PHOTO #######-#######
-    commands.append((CommandType.TAKE_PHOTO, ""))
+    # commands.append((CommandType.TAKE_PHOTO, ""))
     # commands.append((CommandType.TAKE_PHOTO, ""))
 
     #######-####### QGC #######-#######
