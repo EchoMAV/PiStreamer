@@ -577,8 +577,8 @@ if __name__ == "__main__":
         config_file=args.config_file,
         verbose=args.verbose,
         max_zoom=args.max_zoom,
-        streaming_protocol=args.streaming_protocol,
-        command_protocol=args.command_protocol,
+        streaming_protocol=args.streaming_protocol.lower(),
+        command_protocol=args.command_protocol.lower(),
     )
     from command_controller import CommandController
 
