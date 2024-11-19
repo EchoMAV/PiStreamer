@@ -68,6 +68,10 @@ def get_ffmpeg_command_rtp(
         "low_delay",  # Low delay for RTP
         "-fflags",
         "nobuffer",  # No buffer for RTP
+        "-bf",
+        "0",  # Disable B-frames
+        "-g",
+        "30",  # Set GOP size (keyframe interval)
         "-f",
         "rtp",  # Output format for RTP
         f"rtp://{gcs_ip}:{gcs_port}",
@@ -107,6 +111,10 @@ def get_ffmpeg_command_mpeg_ts(
         "low_delay",  # Low delay for RTP
         "-fflags",
         "nobuffer",  # No buffer for RTP
+        "-bf",
+        "0",  # Disable B-frames
+        "-g",
+        "30",  # Set GOP size (keyframe interval)
         "-f",
         "mpegts",  # Output format for MPEG-TS
         f"udp://{gcs_ip}:{gcs_port}",
