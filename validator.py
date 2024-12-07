@@ -2,7 +2,7 @@ import os
 import ipaddress
 from typing import Any, Optional
 
-from constants import CommandProtocolType, StreamingProtocolType
+from constants import CommandProtocolType, RadioType, StreamingProtocolType
 
 
 class Validator:
@@ -20,6 +20,7 @@ class Validator:
         ret &= self.is_json_file(str(self.args.config_file))
         ret &= self.validate_max_zoom(float(self.args.max_zoom))
         ret &= self.validate_streaming_protocol(self.args.streaming_protocol)
+        ret &= self.validate_radio_type(self.args.radio_type)
         ret &= self.validate_command_protocol(self.args.command_protocol)
         return ret
 
@@ -58,6 +59,12 @@ class Validator:
         return streaming_protocol.lower() in [
             StreamingProtocolType.RTP.value,
             StreamingProtocolType.MPEG_TS.value,
+        ]
+
+    def validate_radio_type(self, radio_type: str) -> bool:
+        return radio_type.lower() in [
+            RadioType.MICROHARD.value,
+            RadioType.HERELINK.value,
         ]
 
     def validate_command_protocol(self, command_protocol: str) -> bool:

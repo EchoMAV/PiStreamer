@@ -19,28 +19,36 @@ import argparse
 from pathlib import Path
 import sys
 from constants import (
+    CONFIGURED_MICROHARD_IP_PREFIX,
     DEFAULT_CONFIG_PATH,
     DEFAULT_MAX_ZOOM,
     INIT_BBOX_COLOR,
     MEDIA_FILES_DIRECTORY,
     MIN_ZOOM,
+    MONARK_ID_FILE_PATH,
     NAMESPACE_PREFIX,
     NAMESPACE_URI,
+    QR_CODE_FRAMESIZE,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
     FRAMERATE,
     CommandProtocolType,
     MavlinkGPSData,
     MavlinkMiscData,
+    RadioType,
     StreamingProtocolType,
     TrackStatus,
     ZoomStatus,
 )
 from object_tracker import ObjectTracker
 from cam_utils import get_timestamp
+from qr_utill import detect_qr_code
 from socket_service import SocketService
 from validator import Validator
 from zeromq_service import ZeroMQService
+
+# sys.path.append('/usr/local/monark')
+# from microhard_service import MicrohardService
 
 
 class PiStreamer2:
@@ -55,6 +63,7 @@ class PiStreamer2:
         verbose: bool = False,
         max_zoom: float = DEFAULT_MAX_ZOOM,
         streaming_protocol: str = StreamingProtocolType.RTP.value,
+        radio_type: str = RadioType.MICROHARD.value,
         command_protocol: str = CommandProtocolType.ZEROMQ.value,
     ) -> None:
         # utilities
@@ -74,6 +83,7 @@ class PiStreamer2:
         self.pid = 0
         self.verbose = verbose
         self.streaming_protocol = streaming_protocol
+        self.radio_type = radio_type
         # video settings
         self.gcs_ip = gcs_ip
         self.gcs_port = gcs_port
@@ -406,7 +416,89 @@ class PiStreamer2:
             except Exception as e:
                 print(f"Error processing command: {e}")
 
+    def _is_ip_active(self, ip: str) -> bool:
+        try:
+            # Ping the IP address and check for response within 200 ms
+            output = subprocess.run(
+                ["ping", "-c", "1", "-W", "200", ip],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=0.75,
+            )
+            # Check if the ping was successful
+            return output.returncode == 0
+        except Exception:
+            return False
+
+    def _microhard_pre_stream(self) -> None:
+        """
+        If 192.168.168.1 is detected, that means the drone's radio is default so we should try
+        to find qr codes to start the pairing process.
+        If 172.20.2.[MONARK_ID] is detected, that means the drone's radio is configured and paired
+        so no qr code logic is needed.
+        If neither IP address is found qr code scanning won't be done either.
+        """
+        # Start the camera
+        microhard_config = self.picam2.create_video_configuration(
+            main={"size": tuple(map(int, QR_CODE_FRAMESIZE.split("x")))}
+        )
+        self.picam2.configure(microhard_config)
+        self.picam2.start()
+        self.original_size = self.picam2.capture_metadata()["ScalerCrop"][2:]
+        self.command_controller.set_zoom(MIN_ZOOM)
+
+        monark_id = 1
+        if not os.path.exists(MONARK_ID_FILE_PATH):
+            print("Cannot pair - MONARK ID file not found.")
+        else:
+            with open(MONARK_ID_FILE_PATH, "r") as file:
+                monark_id = int(file.readline().strip())
+
+        expected_ip = f"{CONFIGURED_MICROHARD_IP_PREFIX}.{monark_id}"
+
+        # Main loop
+        try:
+            i = 0
+            while True:
+                frame = self.picam2.capture_array()
+
+                if frame is None or frame.size == 0:
+                    print("Empty frame captured, skipping...")
+                    continue
+
+                i += 1
+                if i % 7 == 0:
+                    i = 0
+                    if self._is_ip_active(expected_ip):
+                        break
+
+                # QR Code pairing check
+                qr_data, _ = detect_qr_code(frame)
+                if qr_data:
+                    (
+                        network_id,
+                        encryption_key,
+                        tx_power,
+                        frequency,
+                    ) = qr_data.strip().split(",")
+                    network_id = f"MONARK-{network_id}"
+                    # TODO do stuff with the qr data
+                    break
+        finally:
+            self.stop_and_clean_all()
+
+    def pre_stream(self) -> None:
+        """
+        In some pre-stream scenarios we want the camera to be processes for qr codes
+        for the purposes of pairing the drone's radio.
+        """
+        if self.radio_type == RadioType.MICROHARD.value:
+            self._microhard_pre_stream()
+
     def stream(self) -> None:
+        """
+        This is the primary loop once we have radio connection to the GCS to send video.
+        """
         # Start the ffmpeg processes
         self._init_ffmpeg_processes()
 
@@ -445,12 +537,13 @@ class PiStreamer2:
                     self._read_and_process_commands()
 
                 # Calculate fps
-                if self.verbose and i == fps_counter:
-                    elapsed_time = time.perf_counter() - startt
-                    startt = time.perf_counter()
-                    fps.append(fps_counter / elapsed_time)
-                    print(f"fps={fps_counter/elapsed_time} | ")
+                if i == fps_counter:
                     i = 0
+                    if self.verbose:
+                        elapsed_time = time.perf_counter() - startt
+                        startt = time.perf_counter()
+                        fps.append(fps_counter / elapsed_time)
+                        print(f"fps={fps_counter/elapsed_time} | ")
 
                 if self.track_status == TrackStatus.INIT.value:
                     ret = self.tracker._init_bounding_box(frame)
@@ -557,6 +650,12 @@ if __name__ == "__main__":
         help="Streaming protocol to use (RTP or MPEGTS)",
     )
     parser.add_argument(
+        "--radio_type",
+        type=str,
+        default=RadioType.MICROHARD.value,
+        help="The type of radio backhauling the video feed",
+    )
+    parser.add_argument(
         "--command_protocol",
         type=str,
         default=CommandProtocolType.ZEROMQ.value,
@@ -578,9 +677,11 @@ if __name__ == "__main__":
         verbose=args.verbose,
         max_zoom=args.max_zoom,
         streaming_protocol=args.streaming_protocol.lower(),
+        radio_type=args.radio_type.lower(),
         command_protocol=args.command_protocol.lower(),
     )
     from command_controller import CommandController
 
     controller = CommandController(pi_streamer)
+    pi_streamer.pre_stream()
     pi_streamer.stream()
