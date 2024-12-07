@@ -7,6 +7,7 @@ from ffmpeg_configs import (
     get_ffmpeg_command_record,
     get_ffmpeg_command_rtp,
 )
+import RPi.GPIO as GPIO
 import os
 from pathlib import Path
 from picamera2 import Picamera2
@@ -452,6 +453,9 @@ class PiStreamer2:
         expected_ip = f"{CONFIGURED_MICROHARD_IP_PREFIX}.{monark_id}"
         check_ip_counter = 7
 
+        GPIO.setmode(GPIO.BCM)  # Use BCM numbering
+        GPIO.setup(6, GPIO.OUT)  # Set GPIO 6 as an output
+
         # Main loop
         try:
             i = 0
@@ -478,9 +482,18 @@ class PiStreamer2:
                         frequency,
                     ) = qr_data.strip().split(",")
                     network_id = f"MONARK-{network_id}"
-                    # TODO do stuff with the qr data
+
+                    # sound a buzzer on the board to indicate qr was matched
+                    for _ in range(3):
+                        GPIO.output(6, GPIO.HIGH)  # Set GPIO 6 high
+                        time.sleep(0.1)  # Wait for 100ms
+                        GPIO.output(6, GPIO.LOW)  # Set GPIO 6 low
+                        time.sleep(0.1)  # Wait for 100ms
+
+                    # TODO do microhard stuff with the qr data
                     break
         finally:
+            GPIO.cleanup()
             self.stop_and_clean_all()
 
     def pre_stream(self) -> None:
