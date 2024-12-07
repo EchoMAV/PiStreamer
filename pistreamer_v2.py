@@ -47,9 +47,6 @@ from socket_service import SocketService
 from validator import Validator
 from zeromq_service import ZeroMQService
 
-# sys.path.append('/usr/local/monark')
-# from microhard_service import MicrohardService
-
 
 class PiStreamer2:
     def __init__(
@@ -432,17 +429,15 @@ class PiStreamer2:
 
     def _microhard_pre_stream(self) -> None:
         """
-        If 192.168.168.1 is detected, that means the drone's radio is default so we should try
-        to find qr codes to start the pairing process.
-        If 172.20.2.[MONARK_ID] is detected, that means the drone's radio is configured and paired
-        so no qr code logic is needed.
-        If neither IP address is found qr code scanning won't be done either.
+        A factory microhard will be 192.168.168.1 and a configured one is If 172.20.2.[MONARK_ID].
+        If no IP or default IP is detected we should try to find qr codes to start the pairing process.
+        If a configured IP is detected, we switch from pre_stream to regular stream.
         """
         # Start the camera
-        microhard_config = self.picam2.create_video_configuration(
+        qr_config = self.picam2.create_video_configuration(
             main={"size": tuple(map(int, QR_CODE_FRAMESIZE.split("x")))}
         )
-        self.picam2.configure(microhard_config)
+        self.picam2.configure(qr_config)
         self.picam2.start()
         self.original_size = self.picam2.capture_metadata()["ScalerCrop"][2:]
         self.command_controller.set_zoom(MIN_ZOOM)
@@ -455,6 +450,7 @@ class PiStreamer2:
                 monark_id = int(file.readline().strip())
 
         expected_ip = f"{CONFIGURED_MICROHARD_IP_PREFIX}.{monark_id}"
+        check_ip_counter = 7
 
         # Main loop
         try:
@@ -467,7 +463,7 @@ class PiStreamer2:
                     continue
 
                 i += 1
-                if i % 7 == 0:
+                if i % check_ip_counter == 0:
                     i = 0
                     if self._is_ip_active(expected_ip):
                         break
