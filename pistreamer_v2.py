@@ -126,6 +126,9 @@ class PiStreamer2:
         media_directory = Path(f"./{MEDIA_FILES_DIRECTORY}")
         os.makedirs(media_directory, exist_ok=True)
 
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(6, GPIO.OUT)  # Drives buzzer
+
     def _init_ffmpeg_processes(self) -> None:
         """
         Only needs to be done once at the start of the stream.
@@ -453,9 +456,6 @@ class PiStreamer2:
         expected_ip = f"{CONFIGURED_MICROHARD_IP_PREFIX}.{monark_id}"
         check_ip_counter = 7
 
-        GPIO.setmode(GPIO.BCM)  # Use BCM numbering
-        GPIO.setup(6, GPIO.OUT)  # Set GPIO 6 as an output
-
         # Main loop
         try:
             i = 0
@@ -480,6 +480,7 @@ class PiStreamer2:
                         encryption_key,
                         tx_power,
                         frequency,
+                        monark_id,
                     ) = qr_data.strip().split(",")
                     network_id = f"MONARK-{network_id}"
 

@@ -9,3 +9,6 @@ $SUDO apt install -y python3-picamera2
 $SUDO apt install -y ffmpeg
 $SUDO apt install -y python3-opencv
 $SUDO apt install -y python3-numpy
+$SUDO apt install -y python3-paramiko
+pip install pyinstaller --break-system-packages
+pip install pyminifier3 --break-system-packages
