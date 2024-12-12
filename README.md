@@ -119,3 +119,8 @@ If this mode is desired 480p is recommended as a fair balance between image qual
 | 640x360    | 28              | 16:9         | 360p LD - Higher FPS but may result in more frequency image cropping   |
 | 854x480    | 16              | 16:9         | 480p SD - Lower FPS but may contribute to a perceived smoother display |
 | 1280x720   | 7               | 16:9         | 720p HD - Lowest FPS which introduces perceived lag. Not recommended.  |
+
+
+### Building
+`dpkg-deb --root-owner-group --build . ../`
+`sudo apt install ./pistreamer_*`

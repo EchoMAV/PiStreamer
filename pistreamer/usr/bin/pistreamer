@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+# Needed so we can run pistreamer from any location on the pi
+import sys
+import os
+
+sys.path.insert(0, "/usr/lib/python3.11/dist-packages/pistreamer/")
 from typing import Any, Optional
 from exif_service import EXIFService
 from ffmpeg_configs import (
@@ -8,7 +13,6 @@ from ffmpeg_configs import (
     get_ffmpeg_command_rtp,
 )
 import RPi.GPIO as GPIO
-import os
 from pathlib import Path
 from picamera2 import Picamera2
 import pyexiv2
@@ -18,7 +22,6 @@ import time
 import subprocess
 import argparse
 from pathlib import Path
-import sys
 from constants import (
     CONFIGURED_MICROHARD_IP_PREFIX,
     DEFAULT_CONFIG_PATH,
@@ -694,6 +697,7 @@ def main():
     controller = CommandController(pi_streamer)
     pi_streamer.pre_stream()
     pi_streamer.stream()
+
 
 if __name__ == "__main__":
     main()

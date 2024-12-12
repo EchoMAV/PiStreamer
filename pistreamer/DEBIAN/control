@@ -1,0 +1,8 @@
+Package: pistreamer
+Version: 1.1
+Section: network
+Priority: important
+Architecture: arm64
+Depends: libgstreamer1.0-dev, libgstreamer-plugins-base1.0-dev, libgstreamer-plugins-bad1.0-dev, gstreamer1.0-plugins-base, gstreamer1.0-plugins-good, gstreamer1.0-plugins-bad, gstreamer1.0-plugins-ugly, gstreamer1.0-libav, gstreamer1.0-tools, gstreamer1.0-x, gstreamer1.0-alsa, gstreamer1.0-gl, gstreamer1.0-gtk3, gstreamer1.0-qt5, gstreamer1.0-pulseaudio, python3-libcamera, libcamera-apps, python3-picamera2, ffmpeg, python3-opencv, python3-numpy, python3-pyzbar
+Maintainer: MONARK monark@echomav.com
+Description: pistreamer streams video from MONARK to a GCS.
