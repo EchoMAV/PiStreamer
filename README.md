@@ -27,13 +27,13 @@ sudo apt install -y python3-piexif
 sudo apt install -y python3-py3exiv2
 ```
 ## Protocol Selection
-pistreamer_v2 has the option to stream using RTP or MPEG-TS protocols. The reason for this is that QGroundControl/Mission Planner are observed to perform better with RTP streams, whereas ATAK performs better with an MPEG-TS stream. The parameter `streaming_protocol` is used to control the output protocol format.
+pistreamer has the option to stream using RTP or MPEG-TS protocols. The reason for this is that QGroundControl/Mission Planner are observed to perform better with RTP streams, whereas ATAK performs better with an MPEG-TS stream. The parameter `streaming_protocol` is used to control the output protocol format.
 
 ## Non-Daemon operation
 For normal (non-daemon) functionality run the script as below:
 
 ```
-python pistreamer_v2.py --gcs_ip={IP Address} --gcs_port={Port} --streaming_protocol="rtp" --config_file="./477-Pi4.json"
+python pistreamer.py --gcs_ip={IP Address} --gcs_port={Port} --streaming_protocol="rtp" --config_file="./477-Pi4.json"
 ```
 Once the app is running you can send a variety of commands (from a different session) by sending data over a socket defined by `SOCKET_HOST:CMD_SOCKET_PORT`. `_command_tester.py` has several examples you can uncomment and/or modify.
 

@@ -18,7 +18,7 @@ from validator import Validator
 
 
 class CommandController:
-    from pistreamer_v2 import PiStreamer2
+    from pistreamer import PiStreamer2
 
     def __init__(self, pi_streamer: PiStreamer2) -> None:
         self.pi_streamer = pi_streamer
