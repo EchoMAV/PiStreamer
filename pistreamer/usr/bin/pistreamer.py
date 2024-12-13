@@ -497,7 +497,6 @@ class PiStreamer2:
                     # TODO do microhard stuff with the qr data
                     break
         finally:
-            GPIO.cleanup()
             self.stop_and_clean_all()
 
     def pre_stream(self) -> None:
