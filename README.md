@@ -122,5 +122,6 @@ If this mode is desired 480p is recommended as a fair balance between image qual
 
 
 ### Building
-`dpkg-deb --root-owner-group --build . ../`
-`sudo apt install ./pistreamer_*`
+`pistreamer` is designed to be built as a .deb file and installed onto the target RPi.
+Run `./make_debian.sh` to create the deb and install it onto the RPi.
+If you see a warning about `Download is performed unsandboxed as root as file...` you can ignore.

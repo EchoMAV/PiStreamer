@@ -230,12 +230,12 @@ class PiStreamer2:
         self.is_recording = True
 
     def stop_recording(self) -> None:
-        self.is_recording = False
-        if self.ffmpeg_process_record:
+        if self.is_recording and self.ffmpeg_process_record:
             print("Stopping recording...")
             if self.ffmpeg_process_record.stdin:
                 self.ffmpeg_process_record.stdin.close()
             self.ffmpeg_process_record.wait()
+        self.is_recording = False
 
     def start_rtp_stream(self, ip: str, port: str) -> None:
         if self.is_rtp_streaming:

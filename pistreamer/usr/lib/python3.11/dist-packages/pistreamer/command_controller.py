@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import json
+import subprocess
 from time import time
 from typing import Union
 from constants import (
     MIN_ZOOM,
+    SD_CARD_LOCATION,
     ZOOM_RATE,
     CommandType,
     MavlinkGPSData,
@@ -15,6 +17,7 @@ from constants import (
     TrackStatus,
 )
 from validator import Validator
+from functools import cached_property
 
 
 class CommandController:
@@ -28,6 +31,26 @@ class CommandController:
         self.current_zoom = MIN_ZOOM
         self.last_zoom_time = 0
 
+    @cached_property
+    def is_sd_card_available(self) -> bool:
+        """
+        We only want to save files to disk if an SD card is available.
+        """
+        try:
+            result = subprocess.run(
+                ["sudo", "fdisk", "-l"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=2,
+            )
+            if SD_CARD_LOCATION in result.stdout:
+                return True
+            return False
+        except Exception as e:
+            print(f"Error occurred: {e}")
+            return False
+
     def handle_command(self, command_type: str, command_value: str = "") -> None:
         """
         Attempts to handle the GCS commands for PiStreamer. If an exception occurs it is
@@ -35,9 +58,11 @@ class CommandController:
         """
         # Higher priority commands should come first in if/elif/else for minor performance improvements
         if command_type == CommandType.TAKE_PHOTO.value:
-            self.pi_streamer.take_photo(file_name=command_value)
+            if self.is_sd_card_available:
+                self.pi_streamer.take_photo(file_name=command_value)
         elif command_type == CommandType.RECORD.value:
-            self.pi_streamer.start_recording(file_name=command_value)
+            if self.is_sd_card_available:
+                self.pi_streamer.start_recording(file_name=command_value)
         elif command_type == CommandType.ZOOM.value:
             try:
                 zoom_status = str(command_value).lower().strip()

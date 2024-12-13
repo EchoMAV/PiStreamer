@@ -10,7 +10,6 @@ STREAMING_FRAMESIZE: Final = "1280x720"  # 720p
 QR_CODE_FRAMESIZE: Final = "1920x1080"  # 1080p
 STILL_FRAMESIZE: Final = "4056x3040"  # 12 MP
 ZOOM_RATE: Final = 1.65  # zoom rate per second
-MEDIA_FILES_DIRECTORY: Final = "MediaFiles"
 CMD_SOCKET_HOST = "0.0.0.0"
 OUTPUT_SOCKET_HOST = "localhost"
 CMD_SOCKET_PORT = 54321
@@ -22,6 +21,9 @@ NAMESPACE_URI = "http://pix4d.com/camera/1.0/"
 NAMESPACE_PREFIX = "Camera"
 CONFIGURED_MICROHARD_IP_PREFIX = "172.20.2"
 MONARK_ID_FILE_PATH = "/usr/local/monark_id.txt"
+SD_CARD_LOCATION: Final = "/dev/mmcblk1p1"
+SD_CARD_MOUNTED_LOCATION: Final = "/mnt/external_sd"
+MEDIA_FILES_DIRECTORY: Final = f"{SD_CARD_MOUNTED_LOCATION}/DCIM"
 
 
 class CommandType(Enum):

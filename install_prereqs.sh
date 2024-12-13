@@ -9,3 +9,7 @@ $SUDO apt install -y python3-picamera2
 $SUDO apt install -y ffmpeg
 $SUDO apt install -y python3-opencv
 $SUDO apt install -y python3-numpy
+$SUDO apt install -y libzmq3-dev
+$SUDO apt install -y python3-zmq
+$SUDO apt install -y python3-piexif
+$SUDO apt install -y python3-py3exiv2
