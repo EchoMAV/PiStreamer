@@ -240,6 +240,7 @@ class PiStreamer2:
                 self.ffmpeg_process_record.stdin.close()
             self.ffmpeg_process_record.wait()
         self.is_recording = False
+        os.sync()  # type: ignore
 
     def start_rtp_stream(self, ip: str, port: str) -> None:
         if self.is_rtp_streaming:
@@ -328,6 +329,7 @@ class PiStreamer2:
         if not file_name:
             file_name = str(f"./{MEDIA_FILES_DIRECTORY}/{get_timestamp()}.jpg")
         self.picam2.capture_file(file_name)
+        os.sync()  # type: ignore
 
         if not is_same_resolution:
             self.picam2.stop()
