@@ -7,9 +7,9 @@ MIN_ZOOM: Final = 1.0
 DEFAULT_MAX_ZOOM = 16.0  # this has the potential to change
 DEFAULT_CONFIG_PATH: Final = "477-Pi4.json"
 STREAMING_FRAMESIZE: Final = "1280x720"  # 720p
+QR_CODE_FRAMESIZE: Final = "1920x1080"  # 1080p
 STILL_FRAMESIZE: Final = "4056x3040"  # 12 MP
 ZOOM_RATE: Final = 1.65  # zoom rate per second
-MEDIA_FILES_DIRECTORY: Final = "MediaFiles"
 CMD_SOCKET_HOST = "0.0.0.0"
 OUTPUT_SOCKET_HOST = "localhost"
 CMD_SOCKET_PORT = 54321
@@ -19,6 +19,11 @@ INIT_BBOX_COLOR = (128, 128, 128)  # Grey color in BGR
 ACTIVE_BBOX_COLOR = (0, 0, 255)  # Red color in BGR
 NAMESPACE_URI = "http://pix4d.com/camera/1.0/"
 NAMESPACE_PREFIX = "Camera"
+CONFIGURED_MICROHARD_IP_PREFIX = "172.20.2"
+MONARK_ID_FILE_PATH = "/usr/local/monark_id.txt"
+SD_CARD_LOCATION: Final = "/dev/mmcblk1p1"
+SD_CARD_MOUNTED_LOCATION: Final = "/mnt/external_sd"
+MEDIA_FILES_DIRECTORY: Final = f"{SD_CARD_MOUNTED_LOCATION}/DCIM"
 
 
 class CommandType(Enum):
@@ -120,3 +125,12 @@ class MavlinkMiscData:
     )
     camera_model: str = "Unknown"  # i.e. IMX477
     focal_length: Tuple[int, int] = (0, 0)  # i.e (50, 1) for 50mm
+
+
+class RadioType(Enum):
+    """
+    The types of radios supported by the SBX pistreamer.
+    """
+
+    MICROHARD = "microhard"
+    HERELINK = "herelink"

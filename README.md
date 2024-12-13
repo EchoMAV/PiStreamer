@@ -27,13 +27,13 @@ sudo apt install -y python3-piexif
 sudo apt install -y python3-py3exiv2
 ```
 ## Protocol Selection
-pistreamer_v2 has the option to stream using RTP or MPEG-TS protocols. The reason for this is that QGroundControl/Mission Planner are observed to perform better with RTP streams, whereas ATAK performs better with an MPEG-TS stream. The parameter `streaming_protocol` is used to control the output protocol format.
+pistreamer has the option to stream using RTP or MPEG-TS protocols. The reason for this is that QGroundControl/Mission Planner are observed to perform better with RTP streams, whereas ATAK performs better with an MPEG-TS stream. The parameter `streaming_protocol` is used to control the output protocol format.
 
 ## Non-Daemon operation
 For normal (non-daemon) functionality run the script as below:
 
 ```
-python pistreamer_v2.py --gcs_ip={IP Address} --gcs_port={Port} --streaming_protocol="rtp" --config_file="./477-Pi4.json"
+python pistreamer.py --gcs_ip={IP Address} --gcs_port={Port} --streaming_protocol="rtp" --config_file="./477-Pi4.json"
 ```
 Once the app is running you can send a variety of commands (from a different session) by sending data over a socket defined by `SOCKET_HOST:CMD_SOCKET_PORT`. `_command_tester.py` has several examples you can uncomment and/or modify.
 
@@ -119,3 +119,9 @@ If this mode is desired 480p is recommended as a fair balance between image qual
 | 640x360    | 28              | 16:9         | 360p LD - Higher FPS but may result in more frequency image cropping   |
 | 854x480    | 16              | 16:9         | 480p SD - Lower FPS but may contribute to a perceived smoother display |
 | 1280x720   | 7               | 16:9         | 720p HD - Lowest FPS which introduces perceived lag. Not recommended.  |
+
+
+### Building
+`pistreamer` is designed to be built as a .deb file and installed onto the target RPi.
+Run `./make_debian.sh` to create the deb and install it onto the RPi.
+If you see a warning about `Download is performed unsandboxed as root as file...` you can ignore.
