@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
-# Needed so we can run pistreamer from any location on the pi
+# We need to modify the path so pistreamer can be run from any location on the pi
 import sys
 import os
 
 sys.path.insert(0, "/usr/lib/python3.11/dist-packages/pistreamer/")
+
 from typing import Any, Optional
 from exif_service import EXIFService
 from ffmpeg_configs import (
@@ -233,12 +234,12 @@ class PiStreamer2:
         self.is_recording = True
 
     def stop_recording(self) -> None:
-        self.is_recording = False
-        if self.ffmpeg_process_record:
+        if self.is_recording and self.ffmpeg_process_record:
             print("Stopping recording...")
             if self.ffmpeg_process_record.stdin:
                 self.ffmpeg_process_record.stdin.close()
             self.ffmpeg_process_record.wait()
+        self.is_recording = False
 
     def start_rtp_stream(self, ip: str, port: str) -> None:
         if self.is_rtp_streaming:
