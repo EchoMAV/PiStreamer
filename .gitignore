@@ -2,3 +2,4 @@
 *.jpg
 *.vscode
 *__pycache__
+private_key*
