@@ -1,7 +1,10 @@
 import RPi.GPIO as GPIO
 import time
-from constants import ON_DURATION, SLOW_HEART_BEEP_DURATION, BUZZER_PIN
 
+BUZZER_PIN = 6
+ON_DURATION = 0.08
+SLOW_HEART_BEEP_DURATION = 1.95
+FAST_HEART_BEEP_DURATION = 1.35
 """
 # Buzzer Specs
 ## Pairing Drone

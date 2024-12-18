@@ -24,11 +24,8 @@ MONARK_ID_FILE_PATH = "/usr/local/monark_id.txt"
 SD_CARD_LOCATION: Final = "/dev/mmcblk1p1"
 SD_CARD_MOUNTED_LOCATION: Final = "/mnt/external_sd"
 MEDIA_FILES_DIRECTORY: Final = f"{SD_CARD_MOUNTED_LOCATION}/DCIM"
-BUZZER_PIN = 6
-ON_DURATION = 0.08
-SLOW_HEART_BEEP_DURATION = 1.95
-FAST_HEART_BEEP_DURATION = 1.35
 ENCRYPTION_KEY: Final = "ENCRYPTION_KEY"
+
 
 class CommandType(Enum):
     """

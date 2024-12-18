@@ -26,7 +26,6 @@ import subprocess
 import argparse
 from pathlib import Path
 from constants import (
-    BUZZER_PIN,
     CONFIGURED_MICROHARD_IP_PREFIX,
     DEFAULT_CONFIG_PATH,
     DEFAULT_MAX_ZOOM,
@@ -55,7 +54,7 @@ from qr_utill import detect_qr_code
 from socket_service import SocketService
 from validator import Validator
 from zeromq_service import ZeroMQService
-from buzzer_sounds import BuzzerService
+from buzzer_service import BUZZER_PIN, BuzzerService
 
 
 class PiStreamer2:
@@ -468,6 +467,7 @@ class PiStreamer2:
         GPIO.setup(BUZZER_PIN, GPIO.OUT)
 
         scanning_buzzer_process = self._get_buzzer_process("single_beep_slow_heartbeat")
+        pairing_buzzer_process = None
 
         # Main loop
         try:
@@ -494,12 +494,14 @@ class PiStreamer2:
                         tx_power,
                         frequency,
                         monark_id,
-                    ) = qr_data.strip().split(",")
+                    ) = qr_data.strip().split(  # type: ignore
+                        ","
+                    )
                     network_id = f"MONARK-{network_id}"
 
                     # Stop the scanning beep indicator
                     scanning_buzzer_process.send_signal(signal.SIGTERM)
-                    time.sleep(.05)
+                    time.sleep(0.05)
                     # Perform the beep indicating successful QR code read
                     BuzzerService().three_quick_beeps()
 
@@ -519,6 +521,7 @@ class PiStreamer2:
                         ],
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
+                        env=custom_env,
                     )
 
                     if self.verbose:
@@ -527,7 +530,9 @@ class PiStreamer2:
                         )
 
                     # Start beep sequence
-                    pairing_buzzer_process = self._get_buzzer_process("double_beep_slow_heartbeat")
+                    pairing_buzzer_process = self._get_buzzer_process(
+                        "double_beep_slow_heartbeat"
+                    )
                     while True:
                         if self._is_ip_active(expected_ip):
                             pairing_buzzer_process.send_signal(signal.SIGTERM)
@@ -536,18 +541,34 @@ class PiStreamer2:
                     break
         finally:
             self.stop_and_clean_all()
-            # make sure buzzer isn't doing antyhing
+            # clean up buzzer processes
+            if scanning_buzzer_process:
+                scanning_buzzer_process.send_signal(signal.SIGTERM)
+            if pairing_buzzer_process:
+                pairing_buzzer_process.send_signal(signal.SIGTERM)
+            # make sure buzzer isn't doing anything
             GPIO.output(BUZZER_PIN, GPIO.LOW)
 
     def _get_buzzer_process(self, beep_function: str) -> Any:
-        """ 
+        """
         Create a background process to play a buzzer sound based on the provided beep_function name from BuzzerService.
         """
+        command = [
+            "/usr/bin/python3",
+            "-c",
+            (
+                "import sys; "
+                f"sys.path.insert(0, '{INSTALL_PATH}'); "
+                "from buzzer_service import BuzzerService; "
+                f"method_to_call = getattr(BuzzerService(), '{beep_function}'); "
+                "method_to_call()"
+            ),
+        ]
         return subprocess.Popen(
-    [sys.executable, "-c", f"sys.path.insert(0, {INSTALL_PATH}); from buzzer_service import BuzzerService; method_to_call = getattr(BuzzerService(), {beep_function}); method_to_call()"],
-    stdout=subprocess.PIPE,
-    stderr=subprocess.PIPE
-)
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
 
     def pre_stream(self) -> None:
         """
@@ -745,7 +766,7 @@ def main():
     from command_controller import CommandController
 
     controller = CommandController(pi_streamer)
-    # pi_streamer.pre_stream()
+    pi_streamer.pre_stream()
     pi_streamer.stream()
 
 
