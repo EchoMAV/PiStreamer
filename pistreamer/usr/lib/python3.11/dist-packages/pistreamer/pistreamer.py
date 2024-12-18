@@ -51,6 +51,7 @@ from qr_utill import detect_qr_code
 from socket_service import SocketService
 from validator import Validator
 from zeromq_service import ZeroMQService
+from buzzer_sounds import BuzzerService
 
 
 class PiStreamer2:
@@ -486,17 +487,36 @@ class PiStreamer2:
                         encryption_key,
                         tx_power,
                         frequency,
+                        monark_id,
                     ) = qr_data.strip().split(",")
                     network_id = f"MONARK-{network_id}"
 
-                    # sound a buzzer on the board to indicate qr was matched
-                    for _ in range(3):
-                        GPIO.output(6, GPIO.HIGH)  # Set GPIO 6 high
-                        time.sleep(0.1)  # Wait for 100ms
-                        GPIO.output(6, GPIO.LOW)  # Set GPIO 6 low
-                        time.sleep(0.1)  # Wait for 100ms
+                    BuzzerService().three_quick_beeps()
 
-                    # TODO do microhard stuff with the qr data
+                    # Kick off the microhard program command and poll for completion
+                    subprocess.Popen(
+                        [
+                            "microhard",
+                            "--action='pair'",
+                            f"--network_id='{network_id}'",
+                            f"--encryption_key='{encryption_key}'",
+                            f"--tx_power={tx_power}",
+                            f"--frequency={frequency}",
+                            f"--monark_id={monark_id}",
+                        ],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                    )
+
+                    if self.verbose:
+                        print(
+                            f"QR data has been read. Waiting for microhard service to update expected IP..."
+                        )
+
+                    while True:
+                        if self._is_ip_active(expected_ip):
+                            break
+                        time.sleep(1)
                     break
         finally:
             self.stop_and_clean_all()
@@ -697,7 +717,7 @@ def main():
     from command_controller import CommandController
 
     controller = CommandController(pi_streamer)
-    pi_streamer.pre_stream()
+    # pi_streamer.pre_stream()
     pi_streamer.stream()
 
 
