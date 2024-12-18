@@ -3,10 +3,12 @@
 # We need to modify the path so pistreamer can be run from any location on the pi
 import sys
 import os
+from typing import Any, Final, Optional
 
-sys.path.insert(0, "/usr/lib/python3.11/dist-packages/pistreamer/")
+INSTALL_PATH: Final = "/usr/lib/python3.11/dist-packages/pistreamer/"
+sys.path.insert(0, INSTALL_PATH)
 
-from typing import Any, Optional
+import signal
 from exif_service import EXIFService
 from ffmpeg_configs import (
     get_ffmpeg_command_mpeg_ts,
@@ -27,6 +29,7 @@ from constants import (
     CONFIGURED_MICROHARD_IP_PREFIX,
     DEFAULT_CONFIG_PATH,
     DEFAULT_MAX_ZOOM,
+    ENCRYPTION_KEY,
     INIT_BBOX_COLOR,
     MEDIA_FILES_DIRECTORY,
     MIN_ZOOM,
@@ -51,6 +54,7 @@ from qr_utill import detect_qr_code
 from socket_service import SocketService
 from validator import Validator
 from zeromq_service import ZeroMQService
+from buzzer_service import BUZZER_PIN, BuzzerService
 
 
 class PiStreamer2:
@@ -459,8 +463,11 @@ class PiStreamer2:
         expected_ip = f"{CONFIGURED_MICROHARD_IP_PREFIX}.{monark_id}"
         check_ip_counter = 7
 
-        GPIO.setmode(GPIO.BCM)  # Use BCM numbering
-        GPIO.setup(6, GPIO.OUT)  # Set GPIO 6 as an output
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(BUZZER_PIN, GPIO.OUT)
+
+        scanning_buzzer_process = self._get_buzzer_process("single_beep_slow_heartbeat")
+        pairing_buzzer_process = None
 
         # Main loop
         try:
@@ -486,20 +493,82 @@ class PiStreamer2:
                         encryption_key,
                         tx_power,
                         frequency,
-                    ) = qr_data.strip().split(",")
+                        monark_id,
+                    ) = qr_data.strip().split(  # type: ignore
+                        ","
+                    )
                     network_id = f"MONARK-{network_id}"
 
-                    # sound a buzzer on the board to indicate qr was matched
-                    for _ in range(3):
-                        GPIO.output(6, GPIO.HIGH)  # Set GPIO 6 high
-                        time.sleep(0.1)  # Wait for 100ms
-                        GPIO.output(6, GPIO.LOW)  # Set GPIO 6 low
-                        time.sleep(0.1)  # Wait for 100ms
+                    # Stop the scanning beep indicator
+                    scanning_buzzer_process.send_signal(signal.SIGTERM)
+                    time.sleep(0.05)
+                    # Perform the beep indicating successful QR code read
+                    BuzzerService().three_quick_beeps()
 
-                    # TODO do microhard stuff with the qr data
+                    custom_env = os.environ.copy()  # Copy current environment variables
+                    # We pass the encryption key as an environment variable to the microhard service instead of command
+                    # line so it isn't visible in plain text in the process list.
+                    custom_env[ENCRYPTION_KEY] = encryption_key
+                    # Kick off the microhard program command and poll for completion
+                    subprocess.Popen(
+                        [
+                            "microhard",
+                            "--action='pair'",
+                            f"--network_id='{network_id}'",
+                            f"--tx_power={tx_power}",
+                            f"--frequency={frequency}",
+                            f"--monark_id={monark_id}",
+                        ],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        env=custom_env,
+                    )
+
+                    if self.verbose:
+                        print(
+                            f"QR data has been read. Waiting for microhard service to update expected IP..."
+                        )
+
+                    # Start beep sequence
+                    pairing_buzzer_process = self._get_buzzer_process(
+                        "double_beep_slow_heartbeat"
+                    )
+                    while True:
+                        if self._is_ip_active(expected_ip):
+                            pairing_buzzer_process.send_signal(signal.SIGTERM)
+                            break
+                        time.sleep(1)
                     break
         finally:
             self.stop_and_clean_all()
+            # clean up buzzer processes
+            if scanning_buzzer_process:
+                scanning_buzzer_process.send_signal(signal.SIGTERM)
+            if pairing_buzzer_process:
+                pairing_buzzer_process.send_signal(signal.SIGTERM)
+            # make sure buzzer isn't doing anything
+            GPIO.output(BUZZER_PIN, GPIO.LOW)
+
+    def _get_buzzer_process(self, beep_function: str) -> Any:
+        """
+        Create a background process to play a buzzer sound based on the provided beep_function name from BuzzerService.
+        """
+        command = [
+            "/usr/bin/python3",
+            "-c",
+            (
+                "import sys; "
+                f"sys.path.insert(0, '{INSTALL_PATH}'); "
+                "from buzzer_service import BuzzerService; "
+                f"method_to_call = getattr(BuzzerService(), '{beep_function}'); "
+                "method_to_call()"
+            ),
+        ]
+        return subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
 
     def pre_stream(self) -> None:
         """
