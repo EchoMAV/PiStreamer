@@ -8,6 +8,8 @@ SUDO=$(test ${EUID} -ne 0 && which sudo)
 
 $SUDO apt install -y dpkg
 
+$SUDO rm -f *.deb
+
 cd $PACKAGE_NAME
 $SUDO cp usr/lib/python3.11/dist-packages/$PACKAGE_NAME/$PACKAGE_NAME.py usr/bin/$PACKAGE_NAME
 $SUDO chmod 755 usr/bin/$PACKAGE_NAME

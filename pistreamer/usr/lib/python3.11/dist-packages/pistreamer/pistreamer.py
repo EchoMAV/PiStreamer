@@ -444,6 +444,20 @@ class PiStreamer2:
         If no IP or default IP is detected we should try to find qr codes to start the pairing process.
         If a configured IP is detected, we switch from pre_stream to regular stream.
         """
+        monark_id = 1
+        if not os.path.exists(MONARK_ID_FILE_PATH):
+            print("Warning - MONARK ID file not found.")
+        else:
+            with open(MONARK_ID_FILE_PATH, "r") as file:
+                monark_id = int(file.readline().strip())
+
+        expected_ip = f"{CONFIGURED_MICROHARD_IP_PREFIX}.{monark_id}"
+
+        # If the expected paired IP is active no need to try pairing again
+        if self._is_ip_active(expected_ip):
+            print(f"Microhard IP is already configured: {expected_ip}")
+            return
+
         # Start the camera
         qr_config = self.picam2.create_video_configuration(
             main={"size": tuple(map(int, QR_CODE_FRAMESIZE.split("x")))}
@@ -453,14 +467,6 @@ class PiStreamer2:
         self.original_size = self.picam2.capture_metadata()["ScalerCrop"][2:]
         self.command_controller.set_zoom(MIN_ZOOM)
 
-        monark_id = 1
-        if not os.path.exists(MONARK_ID_FILE_PATH):
-            print("Cannot pair - MONARK ID file not found.")
-        else:
-            with open(MONARK_ID_FILE_PATH, "r") as file:
-                monark_id = int(file.readline().strip())
-
-        expected_ip = f"{CONFIGURED_MICROHARD_IP_PREFIX}.{monark_id}"
         check_ip_counter = 7
 
         GPIO.setmode(GPIO.BCM)
