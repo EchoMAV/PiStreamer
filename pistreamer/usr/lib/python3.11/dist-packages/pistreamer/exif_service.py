@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from datetime import datetime, timezone
 from typing import Tuple
 from constants import MavlinkGPSData, MavlinkMiscData

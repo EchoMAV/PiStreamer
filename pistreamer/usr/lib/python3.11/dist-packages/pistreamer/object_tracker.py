@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from typing import Tuple
 import cv2
 import numpy as np

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from typing import Any, Optional, Tuple
 import cv2
 from pyzbar.pyzbar import decode

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from typing import Final, Tuple
 from enum import Enum
 from dataclasses import dataclass
