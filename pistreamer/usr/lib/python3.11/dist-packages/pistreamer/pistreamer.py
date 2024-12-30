@@ -34,9 +34,10 @@ from constants import (
     MEDIA_FILES_DIRECTORY,
     MICROHARD_DEFAULT_IP,
     MIN_ZOOM,
-    MONARK_ID_FILE_PATH,
+    MONARK_ID_FILE_NAME,
     NAMESPACE_PREFIX,
     NAMESPACE_URI,
+    PAIR_STATUS_FILE_PATH,
     QR_CODE_FRAMESIZE,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
@@ -55,7 +56,7 @@ from qr_utill import detect_qr_code
 from socket_service import SocketService
 from validator import Validator
 from zeromq_service import ZeroMQService
-from buzzer_service import BUZZER_PIN, BuzzerService
+from buzzer_service import BUZZER_PIN, GPIO_LOW, BuzzerService
 
 
 class PiStreamer2:
@@ -446,10 +447,10 @@ class PiStreamer2:
         If a configured IP is detected, we switch from pre_stream to regular stream.
         """
         monark_id = 1
-        if not os.path.exists(MONARK_ID_FILE_PATH):
+        if not os.path.exists(MONARK_ID_FILE_NAME):
             print("Warning - MONARK ID file not found.")
         else:
-            with open(MONARK_ID_FILE_PATH, "r") as file:
+            with open(MONARK_ID_FILE_NAME, "r") as file:
                 monark_id = int(file.readline().strip())
 
         expected_ip = f"{CONFIGURED_MICROHARD_IP_PREFIX}.{monark_id}"
@@ -558,10 +559,26 @@ class PiStreamer2:
                         "double_beep_slow_heartbeat"
                     )
                     while True:
-                        if self._is_ip_active(expected_ip):
+                        if os.path.exists(PAIR_STATUS_FILE_PATH):
+                            with open(PAIR_STATUS_FILE_PATH, "r") as file:
+                                status = file.readline().strip()
+                                if status.startswith("FAILURE"):
+                                    print(f"Error pairing microhard: {status}")
+                                    pairing_buzzer_process.send_signal(signal.SIGTERM)
+                                    BuzzerService().long_beep()
+                                    break
+                                elif status.startswith("OK"):
+                                    print(f"Microhard pairing successful: {status}")
+                                    pairing_buzzer_process.send_signal(signal.SIGTERM)
+                                    BuzzerService().three_quick_beeps()
+                                    break
+                                else:
+                                    if self.verbose:
+                                        print(f"Pairing status: {status}")
+                        elif self._is_ip_active(expected_ip):
                             pairing_buzzer_process.send_signal(signal.SIGTERM)
                             break
-                        time.sleep(1)
+                        time.sleep(2)
                     break
         finally:
             try:
@@ -574,7 +591,7 @@ class PiStreamer2:
             except Exception:
                 pass
             # make sure buzzer isn't doing anything
-            GPIO.output(BUZZER_PIN, GPIO.LOW)
+            GPIO.output(BUZZER_PIN, GPIO_LOW)
 
     def _get_buzzer_process(self, beep_function: str) -> Any:
         """

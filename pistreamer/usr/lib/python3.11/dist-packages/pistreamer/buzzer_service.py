@@ -5,7 +5,7 @@ import time
 
 BUZZER_PIN = 6
 ON_DURATION = 0.08
-SLOW_HEART_BEEP_DURATION = 2.75
+SLOW_HEART_BEEP_DURATION = 3.5
 FAST_HEART_BEEP_DURATION = 2.0
 GPIO_HIGH: Final = 0  # the SBX board inverts this logic
 GPIO_LOW: Final = 1  # the SBX board inverts this logic

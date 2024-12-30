@@ -21,12 +21,14 @@ ACTIVE_BBOX_COLOR = (0, 0, 255)  # Red color in BGR
 NAMESPACE_URI = "http://pix4d.com/camera/1.0/"
 NAMESPACE_PREFIX = "Camera"
 CONFIGURED_MICROHARD_IP_PREFIX = "172.20.2"
-MONARK_ID_FILE_PATH = "/usr/local/monark_id.txt"
+MONARK_ID_FILE_NAME: Final = "/usr/local/echopilot/monarkProxy/monark_id.txt"
 SD_CARD_LOCATION: Final = "/dev/mmcblk1p1"
 SD_CARD_MOUNTED_LOCATION: Final = "/mnt/external_sd"
 MEDIA_FILES_DIRECTORY: Final = f"{SD_CARD_MOUNTED_LOCATION}/DCIM"
 ENCRYPTION_KEY: Final = "ENCRYPTION_KEY"
 MICROHARD_DEFAULT_IP: Final = "192.168.168.1"
+PAIR_STATUS_FILE_PATH: Final = "/tmp/pair_status.txt"  # used so that the microhard service can check the status of the microhard (also serves as lockfile)
+GPIO_LOW: Final = 1  # the SBX board inverts this logic
 
 
 class CommandType(Enum):
