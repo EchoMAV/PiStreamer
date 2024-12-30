@@ -32,6 +32,7 @@ from constants import (
     ENCRYPTION_KEY,
     INIT_BBOX_COLOR,
     MEDIA_FILES_DIRECTORY,
+    MICROHARD_DEFAULT_IP,
     MIN_ZOOM,
     MONARK_ID_FILE_PATH,
     NAMESPACE_PREFIX,
@@ -458,6 +459,17 @@ class PiStreamer2:
             print(f"Microhard IP is already configured: {expected_ip}")
             return
 
+        # But if the microhard default IP is not detected then pairing can't start either
+        if not self._is_ip_active(MICROHARD_DEFAULT_IP):
+            print(
+                f"Error: MICROHARD_DEFAULT_IP is not found - cannot proceed with pairing"
+            )
+            # do long beep twice to mean a different error
+            BuzzerService().long_beep()
+            time.sleep(0.5)
+            BuzzerService().long_beep()
+            return
+
         # Start the camera
         qr_config = self.picam2.create_video_configuration(
             main={"size": tuple(map(int, QR_CODE_FRAMESIZE.split("x")))}
@@ -472,7 +484,7 @@ class PiStreamer2:
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(BUZZER_PIN, GPIO.OUT)
 
-        scanning_buzzer_process = self._get_buzzer_process("single_beep_slow_heartbeat")
+        scanning_buzzer_process = self._get_buzzer_process("double_beep_slow_heartbeat")
         pairing_buzzer_process = None
 
         # Main loop
@@ -494,15 +506,21 @@ class PiStreamer2:
                 # QR Code pairing check
                 qr_data, _ = detect_qr_code(frame)
                 if qr_data:
-                    (
-                        network_id,
-                        encryption_key,
-                        tx_power,
-                        frequency,
-                        monark_id,
-                    ) = qr_data.strip().split(  # type: ignore
-                        ","
-                    )
+                    try:
+                        (
+                            network_id,
+                            encryption_key,
+                            tx_power,
+                            frequency,
+                            monark_id,
+                        ) = qr_data.strip().split(  # type: ignore
+                            ","
+                        )
+                    except Exception:
+                        print(f"Error parsing QR data")
+                        scanning_buzzer_process.send_signal(signal.SIGTERM)
+                        BuzzerService().long_beep()
+                        break
                     network_id = f"MONARK-{network_id}"
 
                     # Stop the scanning beep indicator
@@ -546,12 +564,15 @@ class PiStreamer2:
                         time.sleep(1)
                     break
         finally:
-            self.stop_and_clean_all()
-            # clean up buzzer processes
-            if scanning_buzzer_process:
-                scanning_buzzer_process.send_signal(signal.SIGTERM)
-            if pairing_buzzer_process:
-                pairing_buzzer_process.send_signal(signal.SIGTERM)
+            try:
+                self.stop_and_clean_all()
+                # clean up buzzer processes
+                if scanning_buzzer_process:
+                    scanning_buzzer_process.send_signal(signal.SIGTERM)
+                if pairing_buzzer_process:
+                    pairing_buzzer_process.send_signal(signal.SIGTERM)
+            except Exception:
+                pass
             # make sure buzzer isn't doing anything
             GPIO.output(BUZZER_PIN, GPIO.LOW)
 
@@ -771,7 +792,7 @@ def main():
     )
     from command_controller import CommandController
 
-    controller = CommandController(pi_streamer)
+    CommandController(pi_streamer)
     pi_streamer.pre_stream()
     pi_streamer.stream()
 

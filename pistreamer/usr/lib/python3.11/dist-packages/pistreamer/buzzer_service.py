@@ -5,14 +5,14 @@ import time
 
 BUZZER_PIN = 6
 ON_DURATION = 0.08
-SLOW_HEART_BEEP_DURATION = 1.95
-FAST_HEART_BEEP_DURATION = 1.35
+SLOW_HEART_BEEP_DURATION = 2.75
+FAST_HEART_BEEP_DURATION = 2.0
 GPIO_HIGH: Final = 0  # the SBX board inverts this logic
 GPIO_LOW: Final = 1  # the SBX board inverts this logic
 """
 # Buzzer Specs
 ## Pairing Drone
-Single beep slow heartbeat (Drone is in pairing mode scanning for QR codes)
+Single double beep slow heartbeat (Drone is in pairing mode scanning for QR codes)
 Three quick beeps (Drone has successfully scanned the QR code)
 Double beep slow heartbeat (Pairing is in progress)
 """
@@ -53,5 +53,14 @@ class BuzzerService:
         try:
             for _ in range(0, 3):
                 self.quick_beep()
+        except Exception:
+            GPIO.output(BUZZER_PIN, GPIO_LOW)
+
+    def long_beep(self):
+        try:
+            GPIO.output(BUZZER_PIN, GPIO_HIGH)
+            time.sleep(3)
+            GPIO.output(BUZZER_PIN, GPIO_LOW)
+            time.sleep(0.065)
         except Exception:
             GPIO.output(BUZZER_PIN, GPIO_LOW)

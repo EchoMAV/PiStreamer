@@ -26,6 +26,7 @@ SD_CARD_LOCATION: Final = "/dev/mmcblk1p1"
 SD_CARD_MOUNTED_LOCATION: Final = "/mnt/external_sd"
 MEDIA_FILES_DIRECTORY: Final = f"{SD_CARD_MOUNTED_LOCATION}/DCIM"
 ENCRYPTION_KEY: Final = "ENCRYPTION_KEY"
+MICROHARD_DEFAULT_IP: Final = "192.168.168.1"
 
 
 class CommandType(Enum):
