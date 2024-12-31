@@ -54,7 +54,7 @@ from qr_utill import detect_qr_code
 from socket_service import SocketService
 from validator import Validator
 from zeromq_service import ZeroMQService
-from buzzer_service import BUZZER_PIN, GPIO_LOW, BuzzerService
+from buzzer_service import BuzzerService
 
 
 class PiStreamer2:
@@ -547,14 +547,17 @@ class PiStreamer2:
                         text=True,
                     )
 
-                    if not ret.returncode == 0:
+                    if (
+                        not ret.returncode == 0
+                        or "pairing failed" in str(ret.stdout).lower()
+                    ):
                         print(f"Error pairing microhard: {ret.stderr}")
                         pairing_buzzer_process.send_signal(signal.SIGTERM)
                         self._get_buzzer_process("death_beep")
                     else:
                         print(f"Microhard paired successfully")
                         pairing_buzzer_process.send_signal(signal.SIGTERM)
-                        time.sleep(0.05)
+                        time.sleep(2)
                         BuzzerService().success_beeps()
                     break
         finally:
