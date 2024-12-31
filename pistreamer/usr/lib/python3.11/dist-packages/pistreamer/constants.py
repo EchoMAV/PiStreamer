@@ -27,7 +27,6 @@ SD_CARD_MOUNTED_LOCATION: Final = "/mnt/external_sd"
 MEDIA_FILES_DIRECTORY: Final = f"{SD_CARD_MOUNTED_LOCATION}/DCIM"
 ENCRYPTION_KEY: Final = "ENCRYPTION_KEY"
 MICROHARD_DEFAULT_IP: Final = "192.168.168.1"
-PAIR_STATUS_FILE_PATH: Final = "/tmp/pair_status.txt"  # used so that the microhard service can check the status of the microhard (also serves as lockfile)
 GPIO_LOW: Final = 1  # the SBX board inverts this logic
 
 

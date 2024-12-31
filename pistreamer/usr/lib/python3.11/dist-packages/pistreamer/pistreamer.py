@@ -37,7 +37,6 @@ from constants import (
     MONARK_ID_FILE_NAME,
     NAMESPACE_PREFIX,
     NAMESPACE_URI,
-    PAIR_STATUS_FILE_PATH,
     QR_CODE_FRAMESIZE,
     STREAMING_FRAMESIZE,
     STILL_FRAMESIZE,
@@ -529,17 +528,22 @@ class PiStreamer2:
                     time.sleep(0.05)
                     # Perform the beep indicating successful QR code read
                     BuzzerService().three_quick_beeps()
+                    time.sleep(2)
+                    # Start beep sequence
+                    pairing_buzzer_process = self._get_buzzer_process(
+                        "double_beep_slow_heartbeat"
+                    )
 
                     custom_env = os.environ.copy()  # Copy current environment variables
                     # We pass the encryption key as an environment variable to the microhard service instead of command
                     # line so it isn't visible in plain text in the process list.
                     custom_env[ENCRYPTION_KEY] = encryption_key
-                    # Kick off the microhard program command and poll for completion
-                    subprocess.Popen(
+
+                    ret = subprocess.run(
                         [
                             "microhard",
-                            "--action='pair'",
-                            f"--network_id='{network_id}'",
+                            "--action=pair",
+                            f"--network_id={network_id}",
                             f"--tx_power={tx_power}",
                             f"--frequency={frequency}",
                             f"--monark_id={monark_id}",
@@ -547,38 +551,19 @@ class PiStreamer2:
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
                         env=custom_env,
+                        text=True,
                     )
 
-                    if self.verbose:
-                        print(
-                            f"QR data has been read. Waiting for microhard service to update expected IP..."
-                        )
-
-                    # Start beep sequence
-                    pairing_buzzer_process = self._get_buzzer_process(
-                        "double_beep_slow_heartbeat"
-                    )
-                    while True:
-                        if os.path.exists(PAIR_STATUS_FILE_PATH):
-                            with open(PAIR_STATUS_FILE_PATH, "r") as file:
-                                status = file.readline().strip()
-                                if status.startswith("FAILURE"):
-                                    print(f"Error pairing microhard: {status}")
-                                    pairing_buzzer_process.send_signal(signal.SIGTERM)
-                                    BuzzerService().long_beep()
-                                    break
-                                elif status.startswith("OK"):
-                                    print(f"Microhard pairing successful: {status}")
-                                    pairing_buzzer_process.send_signal(signal.SIGTERM)
-                                    BuzzerService().three_quick_beeps()
-                                    break
-                                else:
-                                    if self.verbose:
-                                        print(f"Pairing status: {status}")
-                        elif self._is_ip_active(expected_ip):
-                            pairing_buzzer_process.send_signal(signal.SIGTERM)
-                            break
-                        time.sleep(2)
+                    if not ret.returncode == 0:
+                        print(f"Error pairing microhard: {ret.stderr}")
+                        pairing_buzzer_process.send_signal(signal.SIGTERM)
+                        time.sleep(0.05)
+                        BuzzerService().long_beep()
+                    else:
+                        print(f"Microhard paired successfully")
+                        pairing_buzzer_process.send_signal(signal.SIGTERM)
+                        time.sleep(0.05)
+                        BuzzerService().three_quick_beeps()
                     break
         finally:
             try:
