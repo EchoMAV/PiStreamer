@@ -15,7 +15,6 @@ from ffmpeg_configs import (
     get_ffmpeg_command_record,
     get_ffmpeg_command_rtp,
 )
-import RPi.GPIO as GPIO
 from pathlib import Path
 from picamera2 import Picamera2
 import pyexiv2
@@ -464,10 +463,7 @@ class PiStreamer2:
             print(
                 f"Error: MICROHARD_DEFAULT_IP is not found - cannot proceed with pairing"
             )
-            # do long beep twice to mean a different error
-            BuzzerService().long_beep()
-            time.sleep(0.5)
-            BuzzerService().long_beep()
+            self._get_buzzer_process("five_spaced_out_beeps")
             return
 
         # Start the camera
@@ -481,10 +477,7 @@ class PiStreamer2:
 
         check_ip_counter = 7
 
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(BUZZER_PIN, GPIO.OUT)
-
-        scanning_buzzer_process = self._get_buzzer_process("double_beep_slow_heartbeat")
+        scanning_buzzer_process = self._get_buzzer_process("single_heartbeat")
         pairing_buzzer_process = None
 
         # Main loop
@@ -519,7 +512,7 @@ class PiStreamer2:
                     except Exception:
                         print(f"Error parsing QR data")
                         scanning_buzzer_process.send_signal(signal.SIGTERM)
-                        BuzzerService().long_beep()
+                        self._get_buzzer_process("death_beep")
                         break
                     network_id = f"MONARK-{network_id}"
 
@@ -527,11 +520,11 @@ class PiStreamer2:
                     scanning_buzzer_process.send_signal(signal.SIGTERM)
                     time.sleep(0.05)
                     # Perform the beep indicating successful QR code read
-                    BuzzerService().three_quick_beeps()
+                    BuzzerService().success_beeps()
                     time.sleep(2)
                     # Start beep sequence
                     pairing_buzzer_process = self._get_buzzer_process(
-                        "double_beep_slow_heartbeat"
+                        "double_heartbeat"
                     )
 
                     custom_env = os.environ.copy()  # Copy current environment variables
@@ -557,13 +550,12 @@ class PiStreamer2:
                     if not ret.returncode == 0:
                         print(f"Error pairing microhard: {ret.stderr}")
                         pairing_buzzer_process.send_signal(signal.SIGTERM)
-                        time.sleep(0.05)
-                        BuzzerService().long_beep()
+                        self._get_buzzer_process("death_beep")
                     else:
                         print(f"Microhard paired successfully")
                         pairing_buzzer_process.send_signal(signal.SIGTERM)
                         time.sleep(0.05)
-                        BuzzerService().three_quick_beeps()
+                        BuzzerService().success_beeps()
                     break
         finally:
             try:
@@ -575,8 +567,6 @@ class PiStreamer2:
                     pairing_buzzer_process.send_signal(signal.SIGTERM)
             except Exception:
                 pass
-            # make sure buzzer isn't doing anything
-            GPIO.output(BUZZER_PIN, GPIO_LOW)
 
     def _get_buzzer_process(self, beep_function: str) -> Any:
         """
