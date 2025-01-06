@@ -789,6 +789,7 @@ def main():
 
     CommandController(pi_streamer)
     pi_streamer.pre_stream()
+    BuzzerService().quiet()
     pi_streamer.stream()
 
 

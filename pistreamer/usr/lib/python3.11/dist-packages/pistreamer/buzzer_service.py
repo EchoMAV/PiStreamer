@@ -24,6 +24,9 @@ class BuzzerService:
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(BUZZER_PIN, GPIO.OUT)
 
+    def quiet(self) -> None:
+        GPIO.output(BUZZER_PIN, GPIO_LOW)
+
     def quick_beep(self) -> None:
         try:
             GPIO.output(BUZZER_PIN, GPIO_HIGH)
