@@ -26,6 +26,7 @@ import argparse
 from pathlib import Path
 from constants import (
     CONFIGURED_MICROHARD_IP_PREFIX,
+    CONFIGURED_RPI_IP_PREFIX,
     DEFAULT_CONFIG_PATH,
     DEFAULT_MAX_ZOOM,
     ENCRYPTION_KEY,
@@ -451,11 +452,21 @@ class PiStreamer2:
             with open(MONARK_ID_FILE_NAME, "r") as file:
                 monark_id = int(file.readline().strip())
 
-        expected_ip = f"{CONFIGURED_MICROHARD_IP_PREFIX}.{monark_id}"
+        expected_rpi_ip = f"{CONFIGURED_RPI_IP_PREFIX}.{monark_id}"
+        expected_drone_ip = f"{CONFIGURED_MICROHARD_IP_PREFIX}.{monark_id}"
+
+        if not self._is_ip_active(expected_rpi_ip):
+            print(f"Setting up expected RPi IP: {expected_rpi_ip}")
+            ret = subprocess.run(
+                ["sudo", "/usr/local/echopilot/static-network.sh", str(monark_id)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            time.sleep(1.5)
 
         # If the expected paired IP is active no need to try pairing again
-        if self._is_ip_active(expected_ip):
-            print(f"Microhard IP is already configured: {expected_ip}")
+        if self._is_ip_active(expected_drone_ip):
+            print(f"Microhard IP is already configured: {expected_drone_ip}")
             return
 
         # But if the microhard default IP is not detected then pairing can't start either
@@ -493,7 +504,7 @@ class PiStreamer2:
                 i += 1
                 if i % check_ip_counter == 0:
                     i = 0
-                    if self._is_ip_active(expected_ip):
+                    if self._is_ip_active(expected_drone_ip):
                         break
 
                 # QR Code pairing check
@@ -537,7 +548,7 @@ class PiStreamer2:
                             "microhard",
                             "--action=pair",
                             f"--network_id={network_id}",
-                            f"--tx_power={tx_power}",
+                            f"--tx_power={tx_power}",  # type: ignore
                             f"--frequency={frequency}",
                             f"--monark_id={monark_id}",
                         ],
@@ -551,7 +562,7 @@ class PiStreamer2:
                         not ret.returncode == 0
                         or "pairing failed" in str(ret.stdout).lower()
                     ):
-                        print(f"Error pairing microhard: {ret.stderr}")
+                        print(f"Error pairing microhard: {str(ret.stderr)}")
                         pairing_buzzer_process.send_signal(signal.SIGTERM)
                         self._get_buzzer_process("death_beep")
                     else:
