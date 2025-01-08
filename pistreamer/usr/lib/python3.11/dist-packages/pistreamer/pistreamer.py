@@ -452,8 +452,14 @@ class PiStreamer2:
             with open(MONARK_ID_FILE_NAME, "r") as file:
                 monark_id = int(file.readline().strip())
 
-        expected_rpi_ip = f"{CONFIGURED_RPI_IP_PREFIX}.{monark_id}"
         expected_drone_ip = f"{CONFIGURED_MICROHARD_IP_PREFIX}.{monark_id}"
+        expected_rpi_ip = f"{CONFIGURED_RPI_IP_PREFIX}.{monark_id}"
+
+        for i in range(0, 3):
+            # If the expected paired IP is active no need to try pairing again
+            if self._is_ip_active(expected_drone_ip):
+                print(f"Microhard IP is already configured: {expected_drone_ip}")
+                return
 
         if not self._is_ip_active(expected_rpi_ip):
             print(f"Setting up expected RPi IP: {expected_rpi_ip}")
@@ -463,11 +469,6 @@ class PiStreamer2:
                 stderr=subprocess.PIPE,
             )
             time.sleep(1.5)
-
-        # If the expected paired IP is active no need to try pairing again
-        if self._is_ip_active(expected_drone_ip):
-            print(f"Microhard IP is already configured: {expected_drone_ip}")
-            return
 
         # But if the microhard default IP is not detected then pairing can't start either
         if not self._is_ip_active(MICROHARD_DEFAULT_IP):

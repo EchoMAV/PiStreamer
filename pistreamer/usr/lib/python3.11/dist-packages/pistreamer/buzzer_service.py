@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 """
-Same file between pistreamer and monark-updater
+Same file between pistreamer, monark-updater, and microhard
+
+# TODO refactor to be its own package and importable.
 """
 
 from typing import Final
