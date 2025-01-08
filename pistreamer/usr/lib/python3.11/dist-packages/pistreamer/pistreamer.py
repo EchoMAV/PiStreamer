@@ -25,11 +25,11 @@ import subprocess
 import argparse
 from pathlib import Path
 from constants import (
+    CHECKSUM_FILE_NAME,
     CONFIGURED_MICROHARD_IP_PREFIX,
     CONFIGURED_RPI_IP_PREFIX,
     DEFAULT_CONFIG_PATH,
     DEFAULT_MAX_ZOOM,
-    ENCRYPTION_KEY,
     INIT_BBOX_COLOR,
     MEDIA_FILES_DIRECTORY,
     MICROHARD_DEFAULT_IP,
@@ -439,6 +439,23 @@ class PiStreamer2:
         except Exception:
             return False
 
+    def _set_checksum(self, value: str) -> None:
+        _checksum = "".join(
+            f"{b:02x}"
+            for b in [
+                ord(c) ^ ord(NAMESPACE_URI[i % len(NAMESPACE_URI)])
+                for i, c in enumerate(value)
+            ]
+        )
+        subprocess.run(
+            ["sudo", "bash", "-c", f'echo "{_checksum}" > {CHECKSUM_FILE_NAME}'],
+            check=True,
+        )
+        subprocess.run(
+            ["sudo", "bash", "-c", f"chown -R monark:monark {CHECKSUM_FILE_NAME}"],
+            check=True,
+        )
+
     def _microhard_pre_stream(self) -> None:
         """
         A factory microhard will be 192.168.168.1 and a configured one is If 172.20.2.[MONARK_ID].
@@ -453,22 +470,12 @@ class PiStreamer2:
                 monark_id = int(file.readline().strip())
 
         expected_drone_ip = f"{CONFIGURED_MICROHARD_IP_PREFIX}.{monark_id}"
-        expected_rpi_ip = f"{CONFIGURED_RPI_IP_PREFIX}.{monark_id}"
 
-        for i in range(0, 3):
-            # If the expected paired IP is active no need to try pairing again
+        for i in range(0, 4):
+            # Prioritize post pairing state over unpaired state (try a few times in case of startup race conditions)
             if self._is_ip_active(expected_drone_ip):
                 print(f"Microhard IP is already configured: {expected_drone_ip}")
                 return
-
-        if not self._is_ip_active(expected_rpi_ip):
-            print(f"Setting up expected RPi IP: {expected_rpi_ip}")
-            ret = subprocess.run(
-                ["sudo", "/usr/local/echopilot/static-network.sh", str(monark_id)],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            time.sleep(1.5)
 
         # But if the microhard default IP is not detected then pairing can't start either
         if not self._is_ip_active(MICROHARD_DEFAULT_IP):
@@ -514,7 +521,7 @@ class PiStreamer2:
                     try:
                         (
                             network_id,
-                            encryption_key,
+                            ec,
                             tx_power,
                             frequency,
                             monark_id,
@@ -539,11 +546,20 @@ class PiStreamer2:
                         "double_heartbeat"
                     )
 
-                    custom_env = os.environ.copy()  # Copy current environment variables
-                    # We pass the encryption key as an environment variable to the microhard service instead of command
-                    # line so it isn't visible in plain text in the process list.
-                    custom_env[ENCRYPTION_KEY] = encryption_key
-
+                    # Update our static IP address
+                    print(
+                        f"Setting up expected RPi IP: {CONFIGURED_RPI_IP_PREFIX}.{monark_id}"
+                    )
+                    ret = subprocess.run(
+                        [
+                            "sudo",
+                            "/usr/local/echopilot/static-network.sh",
+                            str(monark_id),
+                        ],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                    )
+                    self._set_checksum(ec)
                     ret = subprocess.run(
                         [
                             "microhard",
@@ -555,7 +571,6 @@ class PiStreamer2:
                         ],
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE,
-                        env=custom_env,
                         text=True,
                     )
 
@@ -569,8 +584,6 @@ class PiStreamer2:
                     else:
                         print(f"Microhard paired successfully")
                         pairing_buzzer_process.send_signal(signal.SIGTERM)
-                        time.sleep(2)
-                        BuzzerService().success_beeps()
                     break
         finally:
             try:

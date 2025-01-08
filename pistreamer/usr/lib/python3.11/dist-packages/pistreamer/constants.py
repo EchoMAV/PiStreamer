@@ -23,10 +23,10 @@ NAMESPACE_PREFIX = "Camera"
 CONFIGURED_MICROHARD_IP_PREFIX = "172.20.2"
 CONFIGURED_RPI_IP_PREFIX = "172.20.3"
 MONARK_ID_FILE_NAME: Final = "/home/monark/monark_id.txt"
+CHECKSUM_FILE_NAME: Final = "/home/monark/.checksum"
 SD_CARD_LOCATION: Final = "/dev/mmcblk1p1"
 SD_CARD_MOUNTED_LOCATION: Final = "/mnt/external_sd"
 MEDIA_FILES_DIRECTORY: Final = f"{SD_CARD_MOUNTED_LOCATION}/DCIM"
-ENCRYPTION_KEY: Final = "ENCRYPTION_KEY"
 MICROHARD_DEFAULT_IP: Final = "192.168.168.1"
 GPIO_LOW: Final = 1  # the SBX board inverts this logic
 
