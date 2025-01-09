@@ -93,6 +93,17 @@ class BuzzerService:
         except Exception:
             GPIO.output(BUZZER_PIN, GPIO_LOW)
 
+    def three_long_failure_beeps(self) -> None:
+        try:
+            self.long_beep()
+            time.sleep(2.0 * NOTE_DURATION)
+            self.long_beep()
+            time.sleep(2.0 * NOTE_DURATION)
+            self.long_beep()
+            GPIO.output(BUZZER_PIN, GPIO_LOW)
+        except Exception:
+            GPIO.output(BUZZER_PIN, GPIO_LOW)
+
     def four_quick_beeps(self) -> None:
         try:
             for _ in range(0, 4):
