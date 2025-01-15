@@ -537,7 +537,7 @@ class PiStreamer2:
 
                     # Stop the scanning beep indicator
                     scanning_buzzer_process.send_signal(signal.SIGTERM)
-                    time.sleep(0.05)
+                    time.sleep(1)
                     # Perform the beep indicating successful QR code read
                     BuzzerService().success_beeps()
                     time.sleep(2)
