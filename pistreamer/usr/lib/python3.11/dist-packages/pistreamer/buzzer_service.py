@@ -24,6 +24,7 @@ GPIO_LOW: Final = 1  # the SBX board inverts this logic
 class BuzzerService:
     def __init__(self):
         GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(False)
         GPIO.setup(BUZZER_PIN, GPIO.OUT)
 
     def quiet(self) -> None:
