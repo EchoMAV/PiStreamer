@@ -471,11 +471,12 @@ class PiStreamer2:
 
         expected_drone_ip = f"{CONFIGURED_MICROHARD_IP_PREFIX}.{monark_id}"
 
-        for i in range(0, 4):
+        for i in range(0, 10):
             # Prioritize post pairing state over unpaired state (try a few times in case of startup race conditions)
             if self._is_ip_active(expected_drone_ip):
                 print(f"Microhard IP is already configured: {expected_drone_ip}")
                 return
+            time.sleep(1)
 
         # But if the microhard default IP is not detected then pairing can't start either
         if not self._is_ip_active(MICROHARD_DEFAULT_IP):

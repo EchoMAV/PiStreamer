@@ -1,5 +1,5 @@
 Package: pistreamer
-Version: 1.1.0
+Version: 1.1.4
 Section: network
 Priority: important
 Architecture: arm64
