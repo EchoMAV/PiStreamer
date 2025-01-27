@@ -60,7 +60,7 @@ if __name__ == "__main__":
     #######-####### ZOOM #######-#######
     # commands.append((CommandType.ZOOM, "2.0"))
     # commands.append((CommandType.MAX_ZOOM,"8.0"))
-    commands.append((CommandType.ZOOM, "in"))
+    # commands.append((CommandType.ZOOM, "in"))
     # commands.append((CommandType.ZOOM,"out"))
     # commands.append((CommandType.ZOOM,"stop"))
 
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     # )
 
     #######-####### PHOTO #######-#######
-    # commands.append((CommandType.TAKE_PHOTO, ""))
+    commands.append((CommandType.TAKE_PHOTO, "/mnt/external_sd/DCIM/testimage.jpg"))
     # commands.append((CommandType.TAKE_PHOTO, ""))
 
     #######-####### QGC #######-#######

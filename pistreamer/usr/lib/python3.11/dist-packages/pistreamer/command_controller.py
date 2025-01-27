@@ -45,7 +45,11 @@ class CommandController:
                 timeout=2,
             )
             if SD_CARD_LOCATION in result.stdout:
+                print("SD card is available so images and videos will save to disk.")
                 return True
+            print(
+                "SD card is not available so images and videos will NOT save to disk."
+            )
             return False
         except Exception as e:
             print(f"Error occurred: {e}")
@@ -58,9 +62,15 @@ class CommandController:
         """
         # Higher priority commands should come first in if/elif/else for minor performance improvements
         if command_type == CommandType.TAKE_PHOTO.value:
+            print(
+                f"Received photo command {self.is_sd_card_available=} {command_value=}"
+            )
             if self.is_sd_card_available:
                 self.pi_streamer.take_photo(file_name=command_value)
         elif command_type == CommandType.RECORD.value:
+            print(
+                f"Received record command {self.is_sd_card_available=} {command_value=}"
+            )
             if self.is_sd_card_available:
                 self.pi_streamer.start_recording(file_name=command_value)
         elif command_type == CommandType.ZOOM.value:
