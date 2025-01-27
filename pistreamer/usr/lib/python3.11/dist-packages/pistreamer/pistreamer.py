@@ -131,10 +131,6 @@ class PiStreamer2:
         self.tracker = ObjectTracker()
         self.track_status = TrackStatus.NONE.value
 
-        # Ensure the media files directory exists
-        media_directory = Path(f"./{MEDIA_FILES_DIRECTORY}")
-        os.makedirs(media_directory, exist_ok=True)
-
     def _init_ffmpeg_processes(self) -> None:
         """
         Only needs to be done once at the start of the stream.
@@ -148,7 +144,7 @@ class PiStreamer2:
         self.ffmpeg_command_record = get_ffmpeg_command_record(
             self.resolution,
             str(FRAMERATE),
-            f"./{MEDIA_FILES_DIRECTORY}/{get_timestamp()}.ts",
+            f"{MEDIA_FILES_DIRECTORY}/{get_timestamp()}.ts",
         )
         self.ffmpeg_command_rtp = get_ffmpeg_command_rtp(
             self.resolution,
@@ -332,7 +328,7 @@ class PiStreamer2:
             self.picam2.start()
 
         if not file_name:
-            file_name = str(f"./{MEDIA_FILES_DIRECTORY}/{get_timestamp()}.jpg")
+            file_name = str(f"{get_timestamp()}.jpg")
         self.picam2.capture_file(file_name)
         os.sync()  # type: ignore
 
@@ -538,10 +534,10 @@ class PiStreamer2:
 
                     # Stop the scanning beep indicator
                     scanning_buzzer_process.send_signal(signal.SIGTERM)
-                    time.sleep(1)
+                    time.sleep(2)
                     # Perform the beep indicating successful QR code read
                     BuzzerService().success_beeps()
-                    time.sleep(2)
+                    time.sleep(3)
                     # Start beep sequence
                     pairing_buzzer_process = self._get_buzzer_process(
                         "double_heartbeat"
