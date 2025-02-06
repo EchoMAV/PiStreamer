@@ -664,15 +664,15 @@ class PiStreamer2:
             i = 0
             startt = time.perf_counter()
             while True:
+                i += 1
+                if i % 2 == 0:
+                    self._read_and_process_commands()
+
                 frame = self.picam2.capture_array()
 
                 if frame is None or frame.size == 0:
                     print("Empty frame captured, skipping...")
                     continue
-
-                i += 1
-                if i % 2 == 0:
-                    self._read_and_process_commands()
 
                 # Calculate fps
                 if i == fps_counter:

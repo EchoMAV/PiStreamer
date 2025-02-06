@@ -11,6 +11,7 @@ import zmq
 if __name__ == "__main__":
 
     def _send_data_socket(commands: List[Tuple[Any, Any]]) -> None:
+        is_err = None
         for command in commands:
             data = f"{command[0].value} {command[1]}".strip()
             try:
@@ -20,8 +21,11 @@ if __name__ == "__main__":
                 client_socket.sendall(_data)
             except Exception as e:
                 print(f"{CMD_SOCKET_HOST}:{CMD_SOCKET_PORT} {e}")
+                is_err = e
             finally:
                 client_socket.close()
+                if is_err:
+                    raise is_err
 
     def _send_data_zeromq(commands: List[Tuple[Any, Any]]) -> None:
         try:

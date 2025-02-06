@@ -52,18 +52,27 @@ class SocketService(CommandService):
     def _read_socket(self) -> str:
         self._accept_client()
         if self.client_socket:
-            ready_to_read, _, _ = select.select(
-                [self.client_socket], [], [], 0
-            )  # don't wait
+            ready_to_read, _, _ = select.select([self.client_socket], [], [], 0)
             if ready_to_read:
-                try:
-                    # Try to receive data from the client
-                    data = self.client_socket.recv(1024)
-                    if data:
-                        return data.decode()
-                except Exception as e:
-                    if e:
+                chunks = []
+                while True:
+                    try:
+                        data = self.client_socket.recv(1024)
+                        if not data:
+                            # No more data available
+                            break
+                        chunks.append(data.decode())
+                    except BlockingIOError:
+                        # No more data ready to be read
+                        break
+                    except Exception as e:
                         print(e)
+                        break
+                result = "".join(chunks)
+                if result:
+                    with open("/tmp/socket.txt", "a") as f:
+                        f.write(f"{result}\n")
+                return result
         return ""
 
     def send_data_out(self, data: str) -> None:
