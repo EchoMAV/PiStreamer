@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 # We need to modify the path so pistreamer can be run from any location on the pi
+from datetime import datetime
 import sys
 import os
 from typing import Any, Final, Optional
@@ -71,7 +72,8 @@ class PiStreamer2:
         max_zoom: float = DEFAULT_MAX_ZOOM,
         streaming_protocol: str = StreamingProtocolType.RTP.value,
         radio_type: str = RadioType.MICROHARD.value,
-        command_protocol: str = CommandProtocolType.ZEROMQ.value,
+        command_protocol: str = CommandProtocolType.SOCKET.value,
+        autostart: bool = False,
     ) -> None:
         # utilities
         from command_controller import CommandController
@@ -127,6 +129,7 @@ class PiStreamer2:
         self.ffmpeg_process_record = None
         self.ffmpeg_process_rtp = None
         self.ffmpeg_process_mpeg_ts = None
+        self.autostart = autostart
         # tracking
         self.tracker = ObjectTracker()
         self.track_status = TrackStatus.NONE.value
@@ -244,6 +247,7 @@ class PiStreamer2:
         os.sync()  # type: ignore
 
     def start_rtp_stream(self, ip: str, port: str) -> None:
+        self.stop_mpeg_ts_stream()  # stop the opposite
         if self.is_rtp_streaming:
             print("Already RTP streaming...")
             return
@@ -274,6 +278,7 @@ class PiStreamer2:
             self.ffmpeg_process_rtp.wait()
 
     def start_mpeg_ts_stream(self, ip: str, port: str) -> None:
+        self.stop_rtp_stream()  # stop the opposite
         if self.is_mpeg_ts_streaming:
             print("Already MPEG-TS streaming...")
             return
@@ -474,8 +479,10 @@ class PiStreamer2:
                 return
             time.sleep(1)
 
+        if self._is_ip_active(MICROHARD_DEFAULT_IP):
+            monark_id = 0
         # But if the microhard default IP is not detected then pairing can't start either
-        if not self._is_ip_active(MICROHARD_DEFAULT_IP):
+        else:
             print(
                 f"Error: MICROHARD_DEFAULT_IP is not found - cannot proceed with pairing"
             )
@@ -637,13 +644,17 @@ class PiStreamer2:
         # Init frame and stream
         fps = []
 
-        # Start the active GCS stream
-        if self.streaming_protocol == StreamingProtocolType.RTP.value:
-            self.start_rtp_stream(ip=str(self.gcs_ip), port=str(self.gcs_port))
-        elif self.streaming_protocol == StreamingProtocolType.MPEG_TS.value:
-            self.start_mpeg_ts_stream(ip=str(self.gcs_ip), port=str(self.gcs_port))
-        else:
+        if self.streaming_protocol not in [
+            StreamingProtocolType.RTP.value,
+            StreamingProtocolType.MPEG_TS.value,
+        ]:
             raise Exception("Invalid active GCS type")
+
+        if self.autostart:
+            if self.streaming_protocol == StreamingProtocolType.RTP.value:
+                self.start_rtp_stream(str(self.gcs_ip), str(self.gcs_port))
+            elif self.streaming_protocol == StreamingProtocolType.MPEG_TS.value:
+                self.start_mpeg_ts_stream(str(self.gcs_ip), str(self.gcs_port))
 
         self.command_controller.set_zoom(MIN_ZOOM)
 
@@ -785,8 +796,13 @@ def main():
     parser.add_argument(
         "--command_protocol",
         type=str,
-        default=CommandProtocolType.ZEROMQ.value,
+        default=CommandProtocolType.SOCKET.value,
         help="Command protocol to use for messages (socket or zeromq)",
+    )
+    parser.add_argument(
+        "--autostart",
+        action="store_true",
+        help="Autostart video stream without waiting for gcs start command.",
     )
     args = parser.parse_args()
     try:
@@ -806,6 +822,7 @@ def main():
         streaming_protocol=args.streaming_protocol.lower(),
         radio_type=args.radio_type.lower(),
         command_protocol=args.command_protocol.lower(),
+        autostart=args.autostart,
     )
     from command_controller import CommandController
 
