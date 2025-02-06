@@ -41,8 +41,8 @@ if __name__ == "__main__":
     def _send_data(commands: List[Tuple[Any, Any]]) -> None:
         ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         ###  Change protocol as needed
-        protocol = CommandProtocolType.ZEROMQ.value
-        # protocol = CommandProtocolType.SOCKET.value
+        # protocol = CommandProtocolType.ZEROMQ.value
+        protocol = CommandProtocolType.SOCKET.value
         ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         print(f"Sending {len(commands)} commands via {protocol}")
@@ -100,14 +100,14 @@ if __name__ == "__main__":
     # )
 
     #######-####### PHOTO #######-#######
-    commands.append((CommandType.TAKE_PHOTO, "/mnt/external_sd/DCIM/testimage.jpg"))
+    # commands.append((CommandType.TAKE_PHOTO, "/mnt/external_sd/DCIM/testimage.jpg"))
     # commands.append((CommandType.TAKE_PHOTO, ""))
 
     #######-####### QGC #######-#######
     # commands.append((CommandType.GCS_IP,"192.168.1.124"))
     # commands.append((CommandType.GCS_PORT,"5600"))
     # commands.append((CommandType.GCS_HOST,"192.168.1.124:5600"))
-    # commands.append((CommandType.START_GCS_STREAM,""))
+    commands.append((CommandType.START_GCS_STREAM, ""))
     # commands.append((CommandType.STOP_GCS_STREAM,""))
     # commands.append((CommandType.STREAMING_PROTOCOL,"rtp"))
 

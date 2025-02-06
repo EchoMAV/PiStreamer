@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from datetime import datetime
 import json
 import subprocess
 from time import time
@@ -61,6 +62,11 @@ class CommandController:
         raised so PiStreamer can update the db row with the error.
         """
         # Higher priority commands should come first in if/elif/else for minor performance improvements
+        print(f"Received command {command_type=} {command_value=}")
+        with open("/tmp/command_log.txt", "a") as f:
+            f.write(
+                f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} - {command_type=} {command_value=}\n'
+            )
         if command_type == CommandType.TAKE_PHOTO.value:
             print(
                 f"Received photo command {self.is_sd_card_available=} {command_value=}"
@@ -236,6 +242,10 @@ class CommandController:
                 f"Setting new {self.pi_streamer.streaming_protocol} stream - IP: {ip} and port: {port}"
             )
 
+            # we only want to start a stream upon updated host info if we were streaming before
+            should_restart_rtp = self.pi_streamer.is_rtp_streaming
+            should_restart_mpeg_ts = self.pi_streamer.is_mpeg_ts_streaming
+
             self.pi_streamer.stop_and_clean_all()
 
             if streaming_protocol:
@@ -243,12 +253,9 @@ class CommandController:
             self.pi_streamer.gcs_ip = ip
             self.pi_streamer.gcs_port = port
 
-            if self.pi_streamer.streaming_protocol == StreamingProtocolType.RTP.value:
+            if should_restart_rtp:
                 self.pi_streamer.start_rtp_stream(ip=ip, port=port)
-            elif (
-                self.pi_streamer.streaming_protocol
-                == StreamingProtocolType.MPEG_TS.value
-            ):
+            elif should_restart_mpeg_ts:
                 self.pi_streamer.start_mpeg_ts_stream(ip=ip, port=port)
             else:
                 raise Exception("Invalid GCS type.")
@@ -265,16 +272,18 @@ class CommandController:
         """
         self.pi_streamer.stop_and_clean_all()
         self.pi_streamer.streaming_bitrate = bitrate
+        start_func = None
 
-        if self.pi_streamer.streaming_protocol == StreamingProtocolType.RTP.value:
+        if self.pi_streamer.is_rtp_streaming:
             start_func = self.pi_streamer.start_rtp_stream
-        elif self.pi_streamer.streaming_protocol == StreamingProtocolType.MPEG_TS.value:
+        elif self.pi_streamer.is_mpeg_ts_streaming:
             start_func = self.pi_streamer.start_mpeg_ts_stream
 
-        start_func(
-            ip=str(self.pi_streamer.gcs_ip),
-            port=str(self.pi_streamer.gcs_port),
-        )
+        if start_func:
+            start_func(
+                ip=str(self.pi_streamer.gcs_ip),
+                port=str(self.pi_streamer.gcs_port),
+            )
 
     def set_zoom(self, zoom_factor: Union[int, float]) -> None:
         # Adjust the zoom by setting the crop rectangle
