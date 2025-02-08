@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from datetime import datetime
 import json
 import subprocess
 from time import time
@@ -61,6 +62,9 @@ class CommandController:
         raised so PiStreamer can update the db row with the error.
         """
         # Higher priority commands should come first in if/elif/else for minor performance improvements
+        with open("/tmp/command.log", "a") as f:
+            formatted_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"{formatted_time}: {command_type} {command_value}\n")
         if command_type == CommandType.TAKE_PHOTO.value:
             print(
                 f"Received photo command {self.is_sd_card_available=} {command_value=}"

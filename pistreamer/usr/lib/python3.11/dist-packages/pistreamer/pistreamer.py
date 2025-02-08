@@ -244,6 +244,7 @@ class PiStreamer2:
         os.sync()  # type: ignore
 
     def start_rtp_stream(self, ip: str, port: str) -> None:
+        self.stop_mpeg_ts_stream()
         if self.is_rtp_streaming:
             print("Already RTP streaming...")
             return
@@ -274,6 +275,7 @@ class PiStreamer2:
             self.ffmpeg_process_rtp.wait()
 
     def start_mpeg_ts_stream(self, ip: str, port: str) -> None:
+        self.stop_rtp_stream()
         if self.is_mpeg_ts_streaming:
             print("Already MPEG-TS streaming...")
             return
